@@ -1,7 +1,7 @@
 # 6502Timing
 6502 Instruction timing
 
-#Building
+# Building
 
 To build you need beebasm https://github.com/stardot/beebasm
 
