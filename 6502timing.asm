@@ -64,7 +64,7 @@ ENDMACRO
 ORG &2000         ; code origin
 .start
 	JSR printstring
-	EQUS "6502 instruction timing checking", 13,"Only errors are printed",13,0
+	EQUS "6502 instruction timing checking", 13,"Only errors are printed",13,"01= 1 Cycle short, FF= 1 Cycle too long",13,0
 	; setup indirect pointers
     LDA #addrFE  MOD 256:STA indirFE
     LDA #addrFE  DIV 256:STA indirFE+1
@@ -88,7 +88,7 @@ ORG &2000         ; code origin
 	TIME 6 :ADC (indirFE,X):ADC (indirFE,X):STOP:CHECK:EQUS"ADC (indirFE,X)",dresult
 	TIME 5 :ADC (indirFE),Y: ADC (indirFE),Y:STOP:CHECK:EQUS"ADC (indirFE),Y",dresult
 	TIME 6 :ADC (indirFF),Y: ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y",dresult
-	
+
 	TIME 2 :AND #imm:AND #imm:STOP:CHECK:EQUS"AND #imm",dresult
 	TIME 3 :AND zp:AND zp:STOP:CHECK:EQUS"AND zp",dresult
 	TIME 4 :AND zpx,X:AND zpx,X:STOP:CHECK:EQUS"AND zpx,X",dresult
@@ -109,13 +109,13 @@ ORG &2000         ; code origin
 	TIME 7 :ASL addrFE ,X:ASL addrFE ,X:STOP:CHECK:EQUS"ASL addrFE ,X",dresult
 	TIME 7 :ASL addrFF ,X:ASL addrFF ,X:STOP:CHECK:EQUS"ASL addrFF ,X",dresult
 	
-	TIME 4 :SEC:SEC:BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
-	TIME 5 :CLC:CLC:BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC taken",dresult
-	{BLOCKCOPY addrFF-14, bs,be : .bs TIME 9 :CLC:CLC:BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult:RESET}
+	SEC:TIME 2 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
+	CLC:TIME 3 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC taken",dresult
+	{BLOCKCOPY addrFF-13, bs,be : .bs CLC:TIME 7 :BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult:RESET}
 	
-	TIME 4 :CLC:CLC:BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS not taken",dresult
-    TIME 5 :SEC:SEC:BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
-    {BLOCKCOPY addrFF-14, bs,be : .bs TIME 9 :SEC:SEC::BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult:RESET}
+	CLC:TIME 2 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS not taken",dresult
+    SEC:TIME 3 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
+    {BLOCKCOPY addrFF-13, bs,be : .bs SEC:TIME 7 :BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult:RESET}
 	
 	TIME 4 :LDA#1:LDA#1:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ not taken",dresult
 	TIME 5 :LDA#0:LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
@@ -136,13 +136,13 @@ ORG &2000         ; code origin
 	TIME 5 :LDA#0:LDA#0::BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL taken",dresult
 	{BLOCKCOPY addrFF-16, bs,be : .bs TIME 9 :LDA#0:LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult:RESET}
 	
-	TIME 5 :BIT &72:BIT &72:BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
-	TIME 5 :CLV:CLV:BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
-	{BLOCKCOPY addrFF-14, bs,be : .bs TIME 9 :CLV:CLV:BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult:RESET}
+	BIT indirFF:TIME 2 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
+	CLV:TIME 3 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
+	{BLOCKCOPY addrFF-13, bs,be : .bs CLV:TIME 7 :BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult:RESET}
 	
-	TIME 4 :CLV:CLV:BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS not taken",dresult
-	TIME 6 :BIT &72:BIT &72:BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS taken",dresult
-	{BLOCKCOPY addrFF-16, bs,be : .bs TIME 10 :BIT &72:BIT &72:BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult:RESET}
+	CLV:TIME 2 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS not taken",dresult
+	BIT indirFF:TIME 3 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS taken",dresult
+	{BLOCKCOPY addrFF-14, bs,be : .bs BIT indirFF: TIME 7 :BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult:RESET}
 	
 	TIME 2 :CLC:CLC:STOP:CHECK:EQUS"CLC",dresult
 	TIME 2 :CLD:CLD:STOP:CHECK:EQUS"CLD",dresult
@@ -204,7 +204,7 @@ ORG &2000         ; code origin
 	
 	{LDA #jmp1 MOD256:STA indirtemp:LDA #jmp1 DIV256:STA indirtemp+1:LDA #jmp2 MOD256:STA indirtemp2:LDA #jmp2 DIV256:STA indirtemp2+1:
 	TIME 5 :JMP (indirtemp):.jmp1 JMP(indirtemp2):.jmp2 STOP:CHECK:EQUS"JMP (&0000)",dresult}
-	TIME 14 :JSR *+3:PLA:PLA:JSR *+3:PLA:PLA:STOP:CHECK:EQUS"JSR &0000",dresult
+	TIME 6 :JSR *+3:JSR *+3:STOP:TAX:PLA:PLA:PLA:PLA:TXA:CHECK:EQUS"JSR &0000",dresult
 	
 	TIME 2 :LDA #imm:LDA #imm:STOP:CHECK:EQUS"LDA #imm",dresult
 	TIME 3 :LDA zp:LDA zp:STOP:CHECK:EQUS"LDA zp",dresult
@@ -266,8 +266,12 @@ ORG &2000         ; code origin
 	TIME 6 :ROR addrFE :ROR addrFE :STOP:CHECK:EQUS"ROR addrFE ",dresult
 	TIME 7 :ROR addrFE ,X:ROR addrFE ,X:STOP:CHECK:EQUS"ROR addrFE ,X",dresult
 	TIME 7 :ROR addrFF ,X:ROR addrFF ,X:STOP:CHECK:EQUS"ROR addrFF ,X",dresult
-	; RTI
-	TIME 15 :JSR*+9:JSR *+6:JMP *+4:RTS:JMP *+3:STOP:CHECK:EQUS"RTS",dresult
+	
+	{LDA #a DIV256: PHA:LDA#a MOD256:PHA :PHP:LDA #b DIV256: PHA:LDA#b MOD256:PHA:PHP
+	TIME 6: RTI:.b RTI:.a STOP:CHECK:EQUS"RTI",dresult}
+	{LDA #a DIV256: PHA:LDA#a MOD256:PHA:LDA #b DIV256: PHA:LDA#b MOD256:PHA
+	TIME 6: .b RTS:.a RTS:STOP:CHECK:EQUS"RTS",dresult}
+	
 	TIME 2 :SBC #imm:SBC #imm:STOP:CHECK:EQUS"SBC #imm",dresult
 	TIME 3 :SBC zp:SBC zp:STOP:CHECK:EQUS"SBC zp",dresult
 	TIME 4 :SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SBC zpx,X",dresult
@@ -333,8 +337,8 @@ ORG &2000         ; code origin
 	TIME 8 :EQUB&E3,indirFE:EQUB&E3,indirFE:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE,X)",dresult
 	TIME 8 :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
 	TIME 8 :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
-	TIME 11 :TSX:TXA:TAY:EQUB&BB:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&BB:EQUBaddrFE MOD256:EQUBaddrFE DIV256:TYA:TAX:TXS:STOP:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
-	TIME 11 :TSX:TXA:TAY:EQUB&BB:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&BB:EQUBaddrFF MOD256:EQUBaddrFF DIV256:TYA:TAX:TXS:STOP:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
+	TSX:STX zpx:LDX#1:TIME 4 :EQUB&BB:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&BB:EQUBaddrFE MOD256:EQUBaddrFE DIV256:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
+	TSX:STX zpx:LDX#1:TIME 5 :EQUB&BB:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&BB:EQUBaddrFF MOD256:EQUBaddrFF DIV256:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
 	TIME 3 :EQUB&A7,zp:EQUB&A7,zp:STOP:CHECK:EQUS"&A7 LAX zp",dresult
 	TIME 4 :EQUB&B7,zpx:EQUB&B7,zpx:STOP:CHECK:EQUS"&B7 LAX zpx",dresult
 	TIME 4 :EQUB&AF:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&AF:EQUBaddrFE MOD256:EQUBaddrFE DIV256:STOP:CHECK:EQUS"&AF LAX addrFE",dresult
@@ -397,8 +401,9 @@ ORG &2000         ; code origin
 	TIME 8 :EQUB&43,indirFE:EQUB&43,indirFE:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE,X)",dresult
 	TIME 8 :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
 	TIME 8 :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult 
-	TIME 11 :TSX:TXA:TAY:EQUB&9B:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&9B:EQUBaddrFE MOD256:EQUBaddrFE DIV256:TYA:TAX:TXS:STOP:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
-	TIME 11 :TSX:TXA:TAY:EQUB&9B:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&9B:EQUBaddrFF MOD256:EQUBaddrFF DIV256:TYA:TAX:TXS:STOP:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
+	TSX:STX zpx:TIME 5 :EQUB&9B:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&9B:EQUBaddrFE MOD256:EQUBaddrFE DIV256:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
+	; the following does't correctly test page boundary crossing . We probably shoudl define where in memory this actually accesses
+	TSX:STX zpx:TIME 5 :EQUB&9B:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&9B:EQUBaddrFF MOD256:EQUBaddrFF DIV256:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
 	TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
 	TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
 	TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
@@ -433,6 +438,8 @@ ORG &2000         ; code origin
 	TIME 5 :EQUB&DC:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&DC:EQUBaddrFF MOD256:EQUBaddrFF DIV256:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
 	TIME 4 :EQUB&FC:EQUBaddrFE MOD256:EQUBaddrFE DIV256:EQUB&FC:EQUBaddrFE MOD256:EQUBaddrFE DIV256:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
 	TIME 5 :EQUB&FC:EQUBaddrFF MOD256:EQUBaddrFF DIV256:EQUB&FC:EQUBaddrFF MOD256:EQUBaddrFF DIV256:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult	
+
+; untest brk CLI
 
 	
 	JSR printstring:EQUS "Done!",13,0
