@@ -8,28 +8,28 @@
 ; it requires some ram in Zero page and some RAM across a page boundary &0900 used here
 ; the code is assembled @ &2000
 
-osasci = &FFE3 ; os print byte
-viabase	= &FE60 ; base address of 6522 via
+osasci   = &FFE3 ; os print byte
+viabase  = &FE60 ; base address of 6522 via
 
-;page boundary needs frew space before and afterwards for branch tests
-addrFE  = &08FE ; address -2 of page boundary
-addrFF  = &08FF ; address -1 of page boundary
+;page boundary needs space before and afterwards for branch tests
+addrFE   = &08FE ; address -2 of page boundary
+addrFF   = &08FF ; address -1 of page boundary
 
 ;Zero page address
-zpx = &70
-zp = &71
-indirFE = &72 ; indirect address of page boundary -2
-indirFF = &74 ; indirect address of page boundary -1
+zpx      = &70
+zp       = &71
+indirFE  = &72 ; indirect address of page boundary -2
+indirFF  = &74 ; indirect address of page boundary -1
 stringptr = &76 
-ptr2 = &78
+ptr2     = &78
 indirtemp = &76
 indirtemp2 = &78
 
-imm = &FF ; immediate constant
+imm      = &FF ; immediate constant
 
 timeoffset = 64
 
-dresult = 128 ; byte to signify print timing error	
+dresult  = 128 ; byte to signify print timing error	
 
 	
 MACRO RESET
@@ -52,7 +52,6 @@ ENDMACRO
 MACRO CHECK
 	JSR check
 ENDMACRO
-
 
 MACRO BLOCKCOPY address,start, end
 	LDA	#(address) MOD256
