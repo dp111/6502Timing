@@ -215,7 +215,7 @@ ORG &2000         ; code origin
 	TIME 5 :LDA addrFF ,X:LDA addrFF ,X:STOP:CHECK:EQUS"LDA addrFF ,X",dresult
 	TIME 4 :LDA addrFE ,Y:LDA addrFE ,Y:STOP:CHECK:EQUS"LDA addrFE ,Y",dresult 
 	TIME 5 :LDA addrFF ,Y:LDA addrFF ,Y:STOP:CHECK:EQUS"LDA addrFF ,Y",dresult 
-	TIME 6 :LDA (indirFF,X):LDA (indirFF,X):STOP:CHECK:EQUS"LDA (indirFF,X)",dresult
+	TIME 6 :LDA (indirFE,X):LDA (indirFE,X):STOP:CHECK:EQUS"LDA (indirFE,X)",dresult
 	TIME 5 :LDA (indirFE),Y: LDA (indirFE),Y:STOP:CHECK:EQUS"LDA (indirFE),Y",dresult
 	TIME 6 :LDA (indirFF),Y: LDA (indirFF),Y:STOP:CHECK:EQUS"LDA (indirFF),Y",dresult
 	TIME 2 :LDX #imm:LDX #imm:STOP:CHECK:EQUS"LDX #imm",dresult
@@ -249,7 +249,7 @@ ORG &2000         ; code origin
 	TIME 5 :ORA addrFF ,X:ORA addrFF ,X:STOP:CHECK:EQUS"ORA addrFF ,X",dresult 
 	TIME 4 :ORA addrFE ,Y:ORA addrFE ,Y:STOP:CHECK:EQUS"ORA addrFE ,Y",dresult 
 	TIME 5 :ORA addrFF ,Y:ORA addrFF ,Y:STOP:CHECK:EQUS"ORA addrFF ,Y",dresult 
-	TIME 6 :ORA (indirFF,X):ORA (indirFF,X):STOP:CHECK:EQUS"ORA (indirFF,X)",dresult
+	TIME 6 :ORA (indirFE,X):ORA (indirFE,X):STOP:CHECK:EQUS"ORA (indirFE,X)",dresult
 	TIME 5 :ORA (indirFE),Y: ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
 	TIME 6 :ORA (indirFF),Y: ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
 	TIME 7 :PHA:PHA:PLA:PLA:STOP:CHECK:EQUS"PHA / PLA",dresult
@@ -281,7 +281,7 @@ ORG &2000         ; code origin
 	TIME 5 :SBC addrFF ,X:SBC addrFF ,X:STOP:CHECK:EQUS"SBC addrFF ,X",dresult 
 	TIME 4 :SBC addrFE ,Y:SBC addrFE ,Y:STOP:CHECK:EQUS"SBC addrFE ,Y",dresult 
 	TIME 5 :SBC addrFF ,Y:SBC addrFF ,Y:STOP:CHECK:EQUS"SBC addrFF ,Y",dresult 
-	TIME 6 :SBC (indirFF,X):SBC (indirFF,X):STOP:CHECK:EQUS"SBC (indirFF,X)",dresult
+	TIME 6 :SBC (indirFE,X):SBC (indirFE,X):STOP:CHECK:EQUS"SBC (indirFE,X)",dresult
 	TIME 5 :SBC (indirFE),Y: SBC (indirFE),Y:STOP:CHECK:EQUS"SBC (indirFE),Y",dresult
 	TIME 6 :SBC (indirFF),Y: SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y",dresult
 	TIME 2 :SEC:SEC:STOP:CHECK:EQUS"SEC",dresult
