@@ -464,15 +464,14 @@ ORG &2000         ; code origin
 	TYA
 	PHA
 	INY
-	INY
+
 .blockcopyloop
-	DEY
 	LDA (stringptr),Y
 	DEY
 	STA (ptr2),Y
-	INY
-	CPY #1
+	CPY #0
 	BNE blockcopyloop
+
 	PLA
 	CLC
 	ADC stringptr:TAY
