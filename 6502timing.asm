@@ -63,7 +63,7 @@ ENDMACRO
 ORG &2000         ; code origin
 .start
    JSR printstring
-   EQUS "6502 instruction timing checking", 13,"Only errors are printed",13,"01= 1 Cycle short, FF= 1 Cycle too long",13,0
+   EQUS "6502 instruction timing checking", 13,"Only errors are printed",13,"(01=1 Cycle short, FF=1 Cycle long,etc)",13,"Checking documented instructions...",13,0
    ; setup indirect pointers
    LDA #addrFE  MOD 256:STA indirFE
    LDA #addrFE  DIV 256:STA indirFE+1
@@ -75,7 +75,7 @@ ORG &2000         ; code origin
 
    RESET
 
-   TIME 2 :ADC #imm :ADC#imm:STOP:CHECK:EQUS "ADC #imm",dresult  
+   TIME 2 :ADC #imm :ADC #imm:STOP:CHECK:EQUS "ADC #imm",dresult  
    TIME 3 :ADC zp:ADC zp:STOP:CHECK:EQUS"ADC zp",dresult
    TIME 4 :ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"ADC zpx,X",dresult
    ;TIME 5 :ADC (indirzp):ADC (indirzp):STOP:CHECK:EQUS"ADC (indirzp)",dresult 
@@ -98,7 +98,7 @@ ORG &2000         ; code origin
    TIME 4 :AND addrFE,Y:AND addrFE,Y:STOP:CHECK:EQUS"AND addrFE,Y",dresult 
    TIME 5 :AND addrFF,Y:AND addrFF,Y:STOP:CHECK:EQUS"AND addrFF,Y",dresult 
    TIME 6 :AND (indirFE,X):AND (indirFE,X):STOP:CHECK:EQUS"AND (indirFE,X)",dresult
-   TIME 5 :AND (indirFE),Y:AND (&72),Y:STOP:CHECK:EQUS"AND (indirFE),Y",dresult
+   TIME 5 :AND (indirFE),Y:AND (indirFE),Y:STOP:CHECK:EQUS"AND (indirFE),Y",dresult
    TIME 6 :AND (indirFF),Y:AND (indirFF),Y:STOP:CHECK:EQUS"AND (indirFF),Y",dresult
 
    TIME 2 :ASL A:ASL A:STOP:CHECK:EQUS"ASL A",dresult
@@ -123,17 +123,17 @@ ORG &2000         ; code origin
    TIME 3 :BIT &FF:BIT &FF:STOP:CHECK:EQUS"BIT &FF",dresult
    TIME 4 :BIT &FFFF:BIT &FFFF:STOP:CHECK:EQUS"BIT &FFFF",dresult
 
-   TIME 4 :LDA#1:LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
-   TIME 5 :LDA#128:LDA#128::BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
-   {BLOCKCOPY addrFF-16, bs,be : .bs TIME 9 :LDA#128:LDA#128:BMI*+4:.b BMI*+6:BMI *+2:BMI b:STOP:RTS:.be : CHECK: EQUS"BMI page cross",dresult:RESET}
+   TIME 2+1 :LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
+   TIME 3+1 :LDA#128::BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
+   {BLOCKCOPY addrFF-14, bs,be : .bs TIME 8 :LDA#128:BMI*+4:.b BMI*+6:BMI *+2:BMI b:STOP:RTS:.be : CHECK: EQUS"BMI page cross",dresult:RESET}
 
-   TIME 4 :LDA#0:LDA#0:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE not taken",dresult
-   TIME 5 :LDA#1:LDA#1:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE taken",dresult
-   {BLOCKCOPY addrFF-16, bs,be : .bs TIME 9 :LDA#1:LDA#1:BNE*+4:.b BNE*+6:BNE *+2:BNE b:STOP:RTS:.be : CHECK: EQUS"BNE page cross",dresult:RESET}
+   TIME 2+1 :LDA#0:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE not taken",dresult
+   TIME 3+1 :LDA#1:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE taken",dresult
+   {BLOCKCOPY addrFF-14, bs,be : .bs TIME 8 :LDA#1:BNE*+4:.b BNE*+6:BNE *+2:BNE b:STOP:RTS:.be : CHECK: EQUS"BNE page cross",dresult:RESET}
 
-   TIME 4 :LDA#128:LDA#128:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL not taken",dresult
-   TIME 5 :LDA#0:LDA#0::BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL taken",dresult
-   {BLOCKCOPY addrFF-16, bs,be : .bs TIME 9 :LDA#0:LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult:RESET}
+   TIME 2+1 :LDA#128:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL not taken",dresult
+   TIME 3+1 :LDA#0:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL taken",dresult
+   {BLOCKCOPY addrFF-14, bs,be : .bs TIME 8 :LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult:RESET}
 
    BIT indirFF:TIME 2 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
    CLV:TIME 3 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
@@ -251,8 +251,12 @@ ORG &2000         ; code origin
    TIME 6 :ORA (indirFE,X):ORA (indirFE,X):STOP:CHECK:EQUS"ORA (indirFE,X)",dresult
    TIME 5 :ORA (indirFE),Y:ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
    TIME 6 :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
-   TIME 7 :PHA:PHA:PLA:PLA:STOP:CHECK:EQUS"PHA / PLA",dresult
-   TIME 7 :PHP:PHP:PLP:PLP:STOP:CHECK:EQUS"PHP / PLP",dresult
+   
+   TIME 3 :PHA:PHA:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHA",dresult
+   PHA:PHA:TIME 4 :PLA:PLA:STOP:CHECK:EQUS"PLA",dresult   
+   TIME 3 :PHP:PHP:STOP:PLP:PLP:CHECK:EQUS"PHP",dresult
+   PHP:PHP:TIME 4 :PLP:PLP:STOP:CHECK:EQUS"PLP",dresult  
+  
    TIME 2 :ROL A:ROL A:STOP:CHECK:EQUS"ROL A",dresult
    TIME 5 :ROL zp:ROL zp:STOP:CHECK:EQUS"ROL zp",dresult
    TIME 6 :ROL zpx,X:ROL zpx,X:STOP:CHECK:EQUS"ROL zpx,X",dresult
@@ -293,7 +297,7 @@ ORG &2000         ; code origin
    TIME 5 :STA addrFF,X:STA addrFF,X:STOP:CHECK:EQUS"STA addrFF,X",dresult
    TIME 5 :STA addrFE,Y:STA addrFE,Y:STOP:CHECK:EQUS"STA addrFE,Y",dresult
    TIME 5 :STA addrFF,Y:STA addrFF,Y:STOP:CHECK:EQUS"STA addrFF,Y",dresult
-   TIME 6 :STA (&72,X):STA (&72,X):STOP:CHECK:EQUS"STA (&72,X)",dresult
+   TIME 6 :STA (indirFE,X):STA (indirFE,X):STOP:CHECK:EQUS"STA (&72,X)",dresult
    TIME 6 :STA (indirFE),Y: STA (indirFE),Y:STOP:CHECK:EQUS"STA (indirFE),Y",dresult
    TIME 6 :STA (indirFF),Y: STA (indirFF),Y:STOP:CHECK:EQUS"STA (indirFF),Y",dresult
    TIME 3 :STX zp:STX zp:STOP:CHECK:EQUS"STX zp",dresult
@@ -309,7 +313,7 @@ ORG &2000         ; code origin
    TIME 4 :TSX:TXS:TSX:TXS:STOP:CHECK:EQUS"TSX",dresult
    TIME 2 :TYA:TYA:STOP:CHECK:EQUS"TYA",dresult
 
-   JSR printstring:EQUS "Now checking undocumented instructions",13,0
+   JSR printstring:EQUS "Done!",13,"Checking undocumented instructions...",13,0
 
    TIME 2 :EQUB &4B,imm:EQUB &4B,imm:STOP:CHECK:EQUS"&4B ALR ( ASR) #imm",dresult
    TIME 2 :EQUB &0B,imm:EQUB &0B,imm:STOP:CHECK:EQUS"&0B ANC ( ANC) #imm",dresult
