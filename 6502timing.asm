@@ -8,6 +8,8 @@
 ; it requires some ram in Zero page and some RAM across a page boundary &0900 used here
 ; the code is assembled @ &2000
 
+
+cpu = 1 ; cpu = 0 for 6502 : cpu =1 for 65C02
 osasci   = &FFE3 ; os print byte
 viabase  = &FE60 ; base address of 6522 via
 
@@ -31,6 +33,8 @@ timeoffset = 64
 
 dresult  = 254 ; byte to signify print timing error
 dterm    = 255 ; string termination byte
+
+CPU cpu
 
 MACRO RESET
 	LDX #1
@@ -69,10 +73,14 @@ ENDMACRO
 ORG &2000         ; code origin
 .start
    JSR printstring
-   EQUS "6502 instruction timing checking", 13
-   EQUS "Build Date : ",TIME$,13
+   IF cpu
+      EQUS "65C02 instruction timing checking",13,13
+   ELSE
+      EQUS "6502 instruction timing checking",13,13
+   ENDIF
+   EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
-   EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13
+   EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
    EQUS "Checking documented instructions...",13,14,dterm
 
    ; setup indirect pointers
@@ -89,7 +97,9 @@ ORG &2000         ; code origin
    TIME 2 :ADC #imm :ADC #imm:STOP:CHECK:EQUS"ADC #imm",dresult
    TIME 3 :ADC zp:ADC zp:STOP:CHECK:EQUS"ADC zp",dresult
    TIME 4 :ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"ADC zpx,X",dresult
-   ;TIME 5 :ADC (indirzp):ADC (indirzp):STOP:CHECK:EQUS"ADC (indirzp)",dresult
+   IF cpu
+      TIME 5 :ADC (indirFE):ADC (indirFE):STOP:CHECK:EQUS"ADC (indirFE)",dresult
+   ENDIF
    TIME 4 :ADC addrFF:ADC addrFF:STOP:CHECK:EQUS"ADC addrFF",dresult
    TIME 4 :ADC addrFE,X:ADC addrFE,X:STOP:CHECK:EQUS"ADC addrFE,X",dresult
    TIME 5 :ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"ADC addrFF,X",dresult
@@ -99,10 +109,28 @@ ORG &2000         ; code origin
    TIME 5 :ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"ADC (indirFE),Y",dresult
    TIME 6 :ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y",dresult
 
+   SED:TIME 2 +cpu:ADC #imm :ADC #imm:STOP:CHECK:EQUS"SED ADC #imm",dresult
+   SED:TIME 3 +cpu:ADC zp:ADC zp:STOP:CHECK:EQUS"SED ADC zp",dresult
+   SED:TIME 4 +cpu:ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"SED ADC zpx,X",dresult
+   IF cpu
+      SED:TIME 5 +cpu:ADC (indirFE):ADC (indirFE):STOP:CHECK:EQUS"SED ADC (indirFE)",dresult
+   ENDIF
+   SED:TIME 4 +cpu:ADC addrFF:ADC addrFF:STOP:CHECK:EQUS"SED ADC addrFF",dresult
+   SED:TIME 4 +cpu:ADC addrFE,X:ADC addrFE,X:STOP:CHECK:EQUS"SED ADC addrFE,X",dresult
+   SED:TIME 5 +cpu:ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"SED ADC addrFF,X",dresult
+   SED:TIME 4 +cpu:ADC addrFE,Y:ADC addrFE,Y:STOP:CHECK:EQUS"SED ADC addrFE,Y",dresult
+   SED:TIME 5 +cpu:ADC addrFF,Y:ADC addrFF,Y:STOP:CHECK:EQUS"SED ADC addrFF,Y",dresult
+   SED:TIME 6 +cpu:ADC (indirFE,X):ADC (indirFE,X):STOP:CHECK:EQUS"SED ADC (indirFE,X)",dresult
+   SED:TIME 5 +cpu:ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"SED ADC (indirFE),Y",dresult
+   SED:TIME 6 +cpu:ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y",dresult
+
+
    TIME 2 :AND #imm:AND #imm:STOP:CHECK:EQUS"AND #imm",dresult
    TIME 3 :AND zp:AND zp:STOP:CHECK:EQUS"AND zp",dresult
    TIME 4 :AND zpx,X:AND zpx,X:STOP:CHECK:EQUS"AND zpx,X",dresult
-   ;TIME 5 :AND (indirzp):AND (indirzp):STOP:CHECK:EQUS"AND (indirzp)",dresult
+   IF cpu
+      TIME 5 :AND (indirFE):AND (indirFE):STOP:CHECK:EQUS"AND (indirFE)",dresult
+   ENDIF
    TIME 4 :AND addrFF:AND addrFF:STOP:CHECK:EQUS"AND addrFF",dresult
    TIME 4 :AND addrFE,X:AND addrFE,X:STOP:CHECK:EQUS"AND addrFE,X",dresult
    TIME 5 :AND addrFF,X:AND addrFF,X:STOP:CHECK:EQUS"AND addrFF,X",dresult
@@ -116,7 +144,7 @@ ORG &2000         ; code origin
    TIME 5 :ASL zp:ASL zp:STOP:CHECK:EQUS"ASL zp",dresult
    TIME 6 :ASL zpx,X:ASL zpx,X:STOP:CHECK:EQUS"ASL zpx,X",dresult
    TIME 6 :ASL addrFE:ASL addrFE :STOP:CHECK:EQUS"ASL addrFE",dresult
-   TIME 7 :ASL addrFE,X:ASL addrFE,X:STOP:CHECK:EQUS"ASL addrFE,X",dresult
+   TIME 7-cpu :ASL addrFE,X:ASL addrFE,X:STOP:CHECK:EQUS"ASL addrFE,X",dresult
    TIME 7 :ASL addrFF,X:ASL addrFF,X:STOP:CHECK:EQUS"ASL addrFF,X",dresult
 
    SEC:TIME 2 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
@@ -146,6 +174,11 @@ ORG &2000         ; code origin
    TIME 3+1 :LDA#0:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL taken",dresult
    {BLOCKCOPY addrFF-14, bs,be : .bs TIME 8 :LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult}
 
+   IF cpu
+      TIME 3 :BRA*+2:BRA*+2:STOP:CHECK:EQUS"BRA taken",dresult
+      {BLOCKCOPY addrFF-12, bs,be : .bs TIME 7 :BRA*+4:.b BRA*+6:BRA *+2:BRA b:STOP:RTS:.be : CHECK: EQUS"BRA page cross",dresult}
+   ENDIF
+
    BIT indirFF:TIME 2 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
    CLV:TIME 3 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
    {BLOCKCOPY addrFF-13, bs,be : .bs CLV:TIME 7 :BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult}
@@ -156,13 +189,15 @@ ORG &2000         ; code origin
    RESET
    TIME 2 :CLC:CLC:STOP:CHECK:EQUS"CLC",dresult
    TIME 2 :CLD:CLD:STOP:CHECK:EQUS"CLD",dresult
-   ;TIME 2 :CLI:CLI:STOP:CHECK:EQUS"CLI",dresult
+
    TIME 2 :CLV:CLV:STOP:CHECK:EQUS"CLV",dresult
 
    TIME 2 :CMP #imm:CMP #imm:STOP:CHECK:EQUS"CMP #imm",dresult
    TIME 3 :CMP zp:CMP zp:STOP:CHECK:EQUS"CMP zp",dresult
    TIME 4 :CMP zpx,X:CMP zpx,X:STOP:CHECK:EQUS"CMP zpx,X",dresult
-   ;TIME 5 :CMP (indirzp):CMP (indirzp):STOP:CHECK:EQUS"CMP (indirzp)",dresult
+   IF cpu
+      TIME 5 :CMP (indirFE):CMP (indirFE):STOP:CHECK:EQUS"CMP (indirFE)",dresult
+   ENDIF
    TIME 4 :CMP addrFF:CMP addrFF :STOP:CHECK:EQUS"CMP addrFF",dresult
    TIME 4 :CMP addrFE,X:CMP addrFE,X:STOP:CHECK:EQUS"CMP addrFE,X",dresult
    TIME 5 :CMP addrFF,X:CMP addrFF,X:STOP:CHECK:EQUS"CMP addrFF,X",dresult
@@ -179,6 +214,10 @@ ORG &2000         ; code origin
    TIME 3 :CPY zp:CPY zp:STOP:CHECK:EQUS"CPY zp",dresult
    TIME 4 :CPY addrFF :CPY addrFF :STOP:CHECK:EQUS"CPY addrFF",dresult
 
+   IF cpu
+      TIME 2 :DEC A:DEC A:STOP:CHECK:EQUS"DEC A",dresult
+   ENDIF
+
    TIME 5 :DEC zp:DEC zp:STOP:CHECK:EQUS"DEC zp",dresult
    TIME 6 :DEC zpx,X:DEC zpx,X:STOP:CHECK:EQUS"DEC zpx,X",dresult
    TIME 6 :DEC addrFE:DEC addrFE :STOP:CHECK:EQUS"DEC addrFE",dresult
@@ -191,7 +230,9 @@ ORG &2000         ; code origin
    TIME 2 :EOR #imm:EOR #imm:STOP:CHECK:EQUS"EOR #imm",dresult
    TIME 3 :EOR zp:EOR zp:STOP:CHECK:EQUS"EOR zp",dresult
    TIME 4 :EOR zpx,X:EOR zpx,X:STOP:CHECK:EQUS"EOR zpx,X",dresult
-   ;TIME 5 :EOR (indirzp):EOR (indirzp):STOP:CHECK:EQUS"EOR (indirzp)",dresult
+   IF cpu
+      TIME 5 :EOR (indirFE):EOR (indirFE):STOP:CHECK:EQUS"EOR (indirFE)",dresult
+   ENDIF
    TIME 4 :EOR addrFF:EOR addrFF :STOP:CHECK:EQUS"EOR addrFF",dresult
    TIME 4 :EOR addrFE,X:EOR addrFE,X:STOP:CHECK:EQUS"EOR addrFE,X",dresult
    TIME 5 :EOR addrFF,X:EOR addrFF,X:STOP:CHECK:EQUS"EOR addrFF,X",dresult
@@ -200,6 +241,10 @@ ORG &2000         ; code origin
    TIME 6 :EOR (indirFE,X):EOR (indirFE,X):STOP:CHECK:EQUS"EOR (indirFE,X)",dresult
    TIME 5 :EOR (indirFE),Y:EOR (indirFE),Y:STOP:CHECK:EQUS"EOR (indirFE),Y",dresult
    TIME 6 :EOR (indirFF),Y:EOR (indirFF),Y:STOP:CHECK:EQUS"EOR (indirFF),Y",dresult
+
+   IF cpu
+      TIME 2 :INC A:INC A:STOP:CHECK:EQUS"INC A",dresult
+   ENDIF
 
    TIME 5 :INC zp:INC zp:STOP:CHECK:EQUS"INC zp",dresult
    TIME 6 :INC zpx,X:INC zpx,X:STOP:CHECK:EQUS"INC zpx,X",dresult
@@ -213,13 +258,20 @@ ORG &2000         ; code origin
    TIME 3 :JMP *+3:JMP *+3:STOP:CHECK:EQUS"JMP &0000",dresult
 
    {LDA #jmp1 MOD256:STA indirtemp:LDA #jmp1 DIV256:STA indirtemp+1:LDA #jmp2 MOD256:STA indirtemp2:LDA #jmp2 DIV256:STA indirtemp2+1:
-   TIME 5 :JMP (indirtemp):.jmp1 JMP(indirtemp2):.jmp2 STOP:CHECK:EQUS"JMP (&0000)",dresult}
+   TIME 5+cpu :JMP (indirtemp):.jmp1 JMP(indirtemp2):.jmp2 STOP:CHECK:EQUS"JMP (&0000)",dresult}
+   IF cpu
+      {LDA #jmp1 MOD256:STA indirtemp:LDA #jmp1 DIV256:STA indirtemp+1:LDA #jmp2 MOD256:STA indirtemp2:LDA #jmp2 DIV256:STA indirtemp2+1:
+      TIME 6 :JMP (indirtemp-1,X):.jmp1 JMP(indirtemp2-1,X):.jmp2 STOP:CHECK:EQUS"JMP (&0000,X)",dresult}
+   ENDIF
+
    TIME 6 :JSR *+3:JSR *+3:STOP:TAX:PLA:PLA:PLA:PLA:TXA:CHECK:EQUS"JSR &0000",dresult
 
    TIME 2 :LDA #imm:LDA #imm:STOP:CHECK:EQUS"LDA #imm",dresult
    TIME 3 :LDA zp:LDA zp:STOP:CHECK:EQUS"LDA zp",dresult
    TIME 4 :LDA zpx,X:LDA zpx,X:STOP:CHECK:EQUS"LDA zpx,X",dresult
-   ;TIME 5 :LDA (indirzp):LDA (indirzp):STOP:CHECK:EQUS"LDA (indirzp)",dresult
+   IF cpu
+      TIME 5 :LDA (indirFE):LDA (indirFE):STOP:CHECK:EQUS"LDA (indirFE)",dresult
+   ENDIF
    TIME 4 :LDA addrFF :LDA addrFF :STOP:CHECK:EQUS"LDA addrFF",dresult
    TIME 4 :LDA addrFE,X:LDA addrFE,X:STOP:CHECK:EQUS"LDA addrFE,X",dresult
    TIME 5 :LDA addrFF,X:LDA addrFF,X:STOP:CHECK:EQUS"LDA addrFF,X",dresult
@@ -228,32 +280,35 @@ ORG &2000         ; code origin
    TIME 6 :LDA (indirFE,X):LDA (indirFE,X):STOP:CHECK:EQUS"LDA (indirFE,X)",dresult
    TIME 5 :LDA (indirFE),Y:LDA (indirFE),Y:STOP:CHECK:EQUS"LDA (indirFE),Y",dresult
    TIME 6 :LDA (indirFF),Y:LDA (indirFF),Y:STOP:CHECK:EQUS"LDA (indirFF),Y",dresult
+
    TIME 2 :LDX #imm:LDX #imm:STOP:CHECK:EQUS"LDX #imm",dresult
    TIME 3 :LDX zp:LDX zp:STOP:CHECK:EQUS"LDX zp",dresult
    TIME 4 :LDX zp,Y:LDX zp,Y:STOP:CHECK:EQUS"LDX zp,Y",dresult
-   ;TIME 5 :LDX (indirzp):LDX (indirzp):STOP:CHECK:EQUS"LDX (indirzp)",dresult
    TIME 4 :LDX addrFF:LDX addrFF:STOP:CHECK:EQUS"LDX addrFF",dresult
    TIME 4 :LDX addrFE,Y:LDX addrFE,Y:STOP:CHECK:EQUS"LDX addrFE,Y",dresult
    TIME 5 :LDX addrFF,Y:LDX addrFF,Y:STOP:CHECK:EQUS"LDX addrFF,Y",dresult
+
    TIME 2 :LDY #imm:LDY #imm:STOP:CHECK:EQUS"LDY #imm",dresult
    TIME 3 :LDY zp:LDY zp:STOP:CHECK:EQUS"LDY zp",dresult
    TIME 4 :LDY zpx,X:LDY zpx,X:STOP:CHECK:EQUS"LDY zpx,X",dresult
-   ;TIME 5 :LDY (indirzp):LDY (indirzp):STOP:CHECK:EQUS"LDY (indirzp)",dresult
    TIME 4 :LDY addrFF :LDY addrFF :STOP:CHECK:EQUS"LDY addrFF",dresult
    TIME 4 :LDY addrFE,X:LDY addrFE ,X:STOP:CHECK:EQUS"LDY addrFE,X",dresult
    TIME 5 :LDY addrFF,X:LDY addrFF ,X:STOP:CHECK:EQUS"LDY addrFF,X",dresult
+
    TIME 2 :LSR A:LSR A:STOP:CHECK:EQUS"LSR A",dresult
    TIME 5 :LSR zp:LSR zp:STOP:CHECK:EQUS"LSR zp",dresult
    TIME 6 :LSR zpx,X:LSR zpx,X:STOP:CHECK:EQUS"LSR zpx,X",dresult
    TIME 6 :LSR addrFE:LSR addrFE:STOP:CHECK:EQUS"LSR addrFE",dresult
-   TIME 7 :LSR addrFE,X:LSR addrFE,X:STOP:CHECK:EQUS"LSR addrFE,X",dresult
+   TIME 7-cpu :LSR addrFE,X:LSR addrFE,X:STOP:CHECK:EQUS"LSR addrFE,X",dresult
    TIME 7 :LSR addrFF,X:LSR addrFF,X:STOP:CHECK:EQUS"LSR addrFF,X",dresult
    TIME 2 :NOP:NOP:STOP:CHECK:EQUS"NOP",dresult
 
    TIME 2 :ORA #imm:ORA #imm:STOP:CHECK:EQUS"ORA #imm",dresult
    TIME 3 :ORA zp:ORA zp:STOP:CHECK:EQUS"ORA zp",dresult
    TIME 4 :ORA zpx,X:ORA zpx,X:STOP:CHECK:EQUS"ORA zpx,X",dresult
-   ;TIME 5 :ORA (indirzp):ORA (indirzp):STOP:CHECK:EQUS"ORA (indirzp)",dresult
+   IF cpu
+      TIME 5 :ORA (indirFE):ORA (indirFE):STOP:CHECK:EQUS"ORA (indirFE)",dresult
+   ENDIF
    TIME 4 :ORA addrFF:ORA addrFF :STOP:CHECK:EQUS"ORA addrFF",dresult
    TIME 4 :ORA addrFE,X:ORA addrFE,X:STOP:CHECK:EQUS"ORA addrFE,X",dresult
    TIME 5 :ORA addrFF,X:ORA addrFF,X:STOP:CHECK:EQUS"ORA addrFF,X",dresult
@@ -264,21 +319,28 @@ ORG &2000         ; code origin
    TIME 6 :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
 
    TIME 3 :PHA:PHA:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHA",dresult
-   PHA:PHA:TIME 4 :PLA:PLA:STOP:CHECK:EQUS"PLA",dresult
    TIME 3 :PHP:PHP:STOP:PLP:PLP:CHECK:EQUS"PHP",dresult
+   PHA:PHA:TIME 4 :PLA:PLA:STOP:CHECK:EQUS"PLA",dresult
    PHP:PHP:TIME 4 :PLP:PLP:STOP:CHECK:EQUS"PLP",dresult
+
+   IF cpu
+      TIME 3 :PHX:PHX:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHX",dresult
+      TIME 3 :PHY:PHY:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHY",dresult
+      PHX:PHX:TIME 4 :PLX:PLX:STOP:CHECK:EQUS"PLX",dresult
+      PHY:PHY:TIME 4 :PLY:PLY:STOP:CHECK:EQUS"PLY",dresult
+   ENDIF
 
    TIME 2 :ROL A:ROL A:STOP:CHECK:EQUS"ROL A",dresult
    TIME 5 :ROL zp:ROL zp:STOP:CHECK:EQUS"ROL zp",dresult
    TIME 6 :ROL zpx,X:ROL zpx,X:STOP:CHECK:EQUS"ROL zpx,X",dresult
    TIME 6 :ROL addrFE:ROL addrFE:STOP:CHECK:EQUS"ROL addrFE",dresult
-   TIME 7 :ROL addrFE,X:ROL addrFE,X:STOP:CHECK:EQUS"ROL addrFE,X",dresult
+   TIME 7-cpu :ROL addrFE,X:ROL addrFE,X:STOP:CHECK:EQUS"ROL addrFE,X",dresult
    TIME 7 :ROL addrFF,X:ROL addrFF,X:STOP:CHECK:EQUS"ROL addrFF,X",dresult
    TIME 2 :ROR A:ROR A:STOP:CHECK:EQUS"ROR A",dresult
    TIME 5 :ROR zp:ROR zp:STOP:CHECK:EQUS"ROR zp",dresult
    TIME 6 :ROR zpx,X:ROR zpx,X:STOP:CHECK:EQUS"ROR zpx,X",dresult
    TIME 6 :ROR addrFE:ROR addrFE:STOP:CHECK:EQUS"ROR addrFE",dresult
-   TIME 7 :ROR addrFE,X:ROR addrFE,X:STOP:CHECK:EQUS"ROR addrFE,X",dresult
+   TIME 7-cpu :ROR addrFE,X:ROR addrFE,X:STOP:CHECK:EQUS"ROR addrFE,X",dresult
    TIME 7 :ROR addrFF,X:ROR addrFF,X:STOP:CHECK:EQUS"ROR addrFF,X",dresult
 
    {LDA #a DIV256: PHA:LDA#a MOD256:PHA :PHP:LDA #b DIV256: PHA:LDA#b MOD256:PHA:PHP
@@ -289,7 +351,9 @@ ORG &2000         ; code origin
    TIME 2 :SBC #imm:SBC #imm:STOP:CHECK:EQUS"SBC #imm",dresult
    TIME 3 :SBC zp:SBC zp:STOP:CHECK:EQUS"SBC zp",dresult
    TIME 4 :SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SBC zpx,X",dresult
-   ;TIME 5 :SBC (indirzp):SBC (indirzp):STOP:CHECK:EQUS"SBC (indirzp)",dresult
+   IF cpu
+      TIME 5 :SBC (indirFE):SBC (indirFE):STOP:CHECK:EQUS"SBC (indirFE)",dresult
+   ENDIF
    TIME 4 :SBC addrFF :SBC addrFF :STOP:CHECK:EQUS"SBC addrFF",dresult
    TIME 4 :SBC addrFE,X:SBC addrFE,X:STOP:CHECK:EQUS"SBC addrFE,X",dresult
    TIME 5 :SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SBC addrFF,X",dresult
@@ -298,12 +362,31 @@ ORG &2000         ; code origin
    TIME 6 :SBC (indirFE,X):SBC (indirFE,X):STOP:CHECK:EQUS"SBC (indirFE,X)",dresult
    TIME 5 :SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SBC (indirFE),Y",dresult
    TIME 6 :SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y",dresult
+
+   SED:TIME 2 +cpu:SBC #imm:SBC #imm:STOP:CHECK:EQUS"SED SBC #imm",dresult
+   SED:TIME 3 +cpu:SBC zp:SBC zp:STOP:CHECK:EQUS"SED SBC zp",dresult
+   SED:TIME 4 +cpu:SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SED SBC zpx,X",dresult
+   IF cpu
+      SED:TIME 5 +cpu:SBC (indirFE):SBC (indirFE):STOP:CHECK:EQUS"SED SBC (indirFE)",dresult
+   ENDIF
+   SED:TIME 4 +cpu:SBC addrFF :SBC addrFF :STOP:CHECK:EQUS"SED SBC addrFF",dresult
+   SED:TIME 4 +cpu:SBC addrFE,X:SBC addrFE,X:STOP:CHECK:EQUS"SED SBC addrFE,X",dresult
+   SED:TIME 5 +cpu:SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SED SBC addrFF,X",dresult
+   SED:TIME 4 +cpu:SBC addrFE,Y:SBC addrFE,Y:STOP:CHECK:EQUS"SED SBC addrFE,Y",dresult
+   SED:TIME 5 +cpu:SBC addrFF,Y:SBC addrFF,Y:STOP:CHECK:EQUS"SED SBC addrFF,Y",dresult
+   SED:TIME 6 +cpu:SBC (indirFE,X):SBC (indirFE,X):STOP:CHECK:EQUS"SED SBC (indirFE,X)",dresult
+   SED:TIME 5 +cpu:SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SED SBC (indirFE),Y",dresult
+   SED:TIME 6 +cpu:SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y",dresult
+
    TIME 2 :SEC:SEC:STOP:CHECK:EQUS"SEC",dresult
    TIME 2 :SED:SED:STOP:CLD:CHECK:EQUS"SED",dresult
    TIME 2 :SEI:SEI:STOP:CHECK:EQUS"SEI",dresult
    TIME 3 :STA zp:STA zp:STOP:CHECK:EQUS"STA zp",dresult
    TIME 4 :STA zpx,X:STA zpx,X:STOP:CHECK:EQUS"STA zpx,X",dresult
-   TIME 4 :STA addrFE:STA addrFE :STOP:CHECK:EQUS"STA addrFE",dresult
+   IF cpu
+      TIME 5 :STA (indirFE):STA (indirFE):STOP:CHECK:EQUS"STA (indirFE)",dresult
+   ENDIF
+   TIME 4 :STA addrFE:STA addrFE:STOP:CHECK:EQUS"STA addrFE",dresult
    TIME 5 :STA addrFE,X:STA addrFE,X:STOP:CHECK:EQUS"STA addrFE,X",dresult
    TIME 5 :STA addrFF,X:STA addrFF,X:STOP:CHECK:EQUS"STA addrFF,X",dresult
    TIME 5 :STA addrFE,Y:STA addrFE,Y:STOP:CHECK:EQUS"STA addrFE,Y",dresult
@@ -317,8 +400,24 @@ ORG &2000         ; code origin
    TIME 3 :STY zp:STY zp:STOP:CHECK:EQUS"STY zp",dresult
    TIME 4 :STY zpx,X:STY zpx,X:STOP:CHECK:EQUS"STY zpx,X",dresult
    TIME 4 :STY addrFE:STY addrFE :STOP:CHECK:EQUS"STY addrFE",dresult
+
+   IF cpu
+      TIME 3 :STZ zp:STZ zp:STOP:CHECK:EQUS"STZ zp",dresult
+      TIME 4 :STZ zpx,X:STZ zpx,X:STOP:CHECK:EQUS"STZ zpx,X",dresult
+      TIME 4 :STZ addrFE:STZ addrFE :STOP:CHECK:EQUS"STZ addrFE",dresult
+      TIME 5 :STZ addrFE,X:STZ addrFE,X :STOP:CHECK:EQUS"STZ addrFE,X",dresult
+   ENDIF
+
    TIME 2 :TAX:TAX:STOP:CHECK:EQUS"TAX",dresult
    TIME 2 :TAY:TAY:STOP:CHECK:EQUS"TAY",dresult
+
+   IF cpu
+      TIME 5 : TRB zp:TRB zp:STOP:CHECK:EQUS"TRB zp",dresult
+      TIME 6 : TRB addrFF:TRB addrFF:STOP:CHECK:EQUS"TRB addrFF",dresult
+      TIME 5 : TSB zp:TSB zp:STOP:CHECK:EQUS"TRB zp",dresult
+      TIME 6 : TSB addrFF:TSB addrFF:STOP:CHECK:EQUS"TRB addrFF",dresult
+   ENDIF
+
    TIME 2 :TSX:TSX:STOP:CHECK:EQUS"TSX",dresult
    TIME 2 :TXA:TXA:STOP:CHECK:EQUS"TXA",dresult
    TIME 4 :TSX:TXS:TSX:TXS:STOP:CHECK:EQUS"TSX",dresult
@@ -326,6 +425,7 @@ ORG &2000         ; code origin
    JSR printstring:EQUS"Testing CLI ( warning may fail)",13,dterm
    CLI:TIME 2 :CLI:CLI:STOP:CHECK:EQUS"CLI",dresult
 
+   IF cpu = 0
    JSR printstring:EQUS"Done!",13,"Checking undocumented instructions...",13,dterm
 
    TIME 2 :EQUB &4B,imm:EQUB &4B,imm:STOP:CHECK:EQUS"&4B ALR ( ASR) #imm",dresult
@@ -454,10 +554,12 @@ ORG &2000         ; code origin
    TIME 5 :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
    TIME 4 :UNDOC3BYTE &FC,addrFE:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
    TIME 5 :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult
-
    ; untested BRK
 
+   ENDIF
+
    JSR printstring:EQUS"Done!",13,dterm
+
    RTS
 
 .blockcopy
@@ -516,9 +618,10 @@ ORG &2000         ; code origin
  }
 
 .check
+   CLD
 	SEC
 	SBC #timeoffset-2
-	;BEQ correct
+	BEQ correct
 	TAX
 
 .printstring
