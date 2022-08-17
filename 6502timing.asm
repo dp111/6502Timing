@@ -54,7 +54,7 @@ MACRO CHECK
 ENDMACRO
 
 MACRO BLOCKCOPY address,start, end
-	LDA	#(address) MOD256
+	LDA #(address) MOD256
 	LDX #(address) DIV256
 	LDY #end-start
 	JSR blockcopy
@@ -490,7 +490,7 @@ ORG &2000         ; code origin
 	PLA
 	STA stringptr+1
 	LDY #1
-	.PrTextLp
+.PrTextLp
 	LDA (stringptr),Y
 	BEQ PrTextEnd
 	CMP#128
@@ -573,15 +573,6 @@ ORG &2000         ; code origin
   ADC #6
 .PrDigit
   ADC #'0':JMP osasci
-
-dresult = 128
-
-
-
-dImm = 129 : EQUS"#imm",0
-
-dADC = 150
-
 
 }
 
