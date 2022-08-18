@@ -9,7 +9,8 @@
 ; the code is assembled @ &2000
 
 
-cpu = 1 ; cpu = 0 for 6502 : cpu =1 for 65C02
+; Pass in cpu = 0 for 6502 : cpu =1 for 65C12 ; cpu = 2 for 65C02
+
 osasci   = &FFE3 ; os print byte
 viabase  = &FE60 ; base address of 6522 via
 
@@ -64,11 +65,20 @@ MACRO BLOCKCOPY address,start, end
 	JSR blockcopy
 ENDMACRO
 
+MACRO UNDOC1BYTE byte
+   EQUB byte
+   EQUB byte
+ENDMACRO
+
+MACRO UNDOC2BYTE byte,address
+   EQUB byte,address
+   EQUB byte,address
+ENDMACRO
+
 MACRO UNDOC3BYTE byte,address
    EQUB byte,address MOD256,address DIV256
    EQUB byte,address MOD256,address DIV256
 ENDMACRO
-
 
 ORG &2000         ; code origin
 .start
@@ -78,6 +88,7 @@ ORG &2000         ; code origin
    ELSE
       EQUS "6502 instruction timing checking",13,13
    ENDIF
+   EQUS "Version : 0.10",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
@@ -159,8 +170,38 @@ ORG &2000         ; code origin
    TIME 5 :LDA#0:LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
    {BLOCKCOPY addrFF-16, bs,be : .bs TIME 9 :LDA#0:LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
 
+   IF cpu
+      TIME 2 :BIT #imm:BIT #imm:STOP:CHECK:EQUS"BIT #imm",dresult
+      TIME 4 :BIT zpx,X:BIT zpx,X:STOP:CHECK:EQUS"BIT zpx,X",dresult
+   ENDIF
+
    TIME 3 :BIT zp:BIT zp:STOP:CHECK:EQUS"BIT zp",dresult
    TIME 4 :BIT addrFF:BIT addrFF:STOP:CHECK:EQUS"BIT addrFF",dresult
+
+   IF cpu=2
+      ; BBR instructions
+      LDA #&FF : STA zp:
+      TIME 10 :EQUB &0f,zp,3:EQUB &0f,zp,3:EQUB &0f,zp,3:EQUB &0f,zp,3:STOP:CHECK: EQUS"BBR0 not taken",dresult
+      TIME 10 :EQUB &1f,zp,3:EQUB &1f,zp,3:EQUB &1f,zp,3:EQUB &1f,zp,3:STOP:CHECK: EQUS"BBR1 not taken",dresult
+      TIME 10 :EQUB &2f,zp,3:EQUB &2f,zp,3:EQUB &2f,zp,3:EQUB &2f,zp,3:STOP:CHECK: EQUS"BBR2 not taken",dresult
+      TIME 10 :EQUB &3f,zp,3:EQUB &3f,zp,3:EQUB &3f,zp,3:EQUB &3f,zp,3:STOP:CHECK: EQUS"BBR3 not taken",dresult
+      TIME 10 :EQUB &4f,zp,3:EQUB &4f,zp,3:EQUB &4f,zp,3:EQUB &4f,zp,3:STOP:CHECK: EQUS"BBR4 not taken",dresult
+      TIME 10 :EQUB &5f,zp,3:EQUB &5f,zp,3:EQUB &5f,zp,3:EQUB &5f,zp,3:STOP:CHECK: EQUS"BBR5 not taken",dresult
+      TIME 10 :EQUB &6f,zp,3:EQUB &6f,zp,3:EQUB &6f,zp,3:EQUB &6f,zp,3:STOP:CHECK: EQUS"BBR6 not taken",dresult
+      TIME 10 :EQUB &7f,zp,3:EQUB &7f,zp,3:EQUB &7f,zp,3:EQUB &7f,zp,3:STOP:CHECK: EQUS"BBR7 not taken",dresult
+      LDA #0 : STA zp:
+      TIME 10 :EQUB &8f,zp,3:EQUB &8f,zp,3:EQUB &8f,zp,3:EQUB &8f,zp,3:STOP:CHECK: EQUS"BBS0 not taken",dresult
+      TIME 10 :EQUB &9f,zp,3:EQUB &9f,zp,3:EQUB &9f,zp,3:EQUB &9f,zp,3:STOP:CHECK: EQUS"BBS1 not taken",dresult
+      TIME 10 :EQUB &Af,zp,3:EQUB &Af,zp,3:EQUB &Af,zp,3:EQUB &Af,zp,3:STOP:CHECK: EQUS"BBS2 not taken",dresult
+      TIME 10 :EQUB &Bf,zp,3:EQUB &Bf,zp,3:EQUB &Bf,zp,3:EQUB &Bf,zp,3:STOP:CHECK: EQUS"BBS3 not taken",dresult
+      TIME 10 :EQUB &Cf,zp,3:EQUB &Cf,zp,3:EQUB &Cf,zp,3:EQUB &Cf,zp,3:STOP:CHECK: EQUS"BBS4 not taken",dresult
+      TIME 10 :EQUB &Df,zp,3:EQUB &Df,zp,3:EQUB &Df,zp,3:EQUB &Df,zp,3:STOP:CHECK: EQUS"BBS5 not taken",dresult
+      TIME 10 :EQUB &Ef,zp,3:EQUB &Ef,zp,3:EQUB &Ef,zp,3:EQUB &Ef,zp,3:STOP:CHECK: EQUS"BBS6 not taken",dresult
+      TIME 10 :EQUB &Ff,zp,3:EQUB &Ff,zp,3:EQUB &Ff,zp,3:EQUB &Ff,zp,3:STOP:CHECK: EQUS"BBS7 not taken",dresult
+
+      ; Todo Page crossing ( needs work )
+      {BLOCKCOPY addrFF-14, bs,be : .bs TIME 12 :LDA#0::EQUB &0f,zp,3:EQUB &0f,zp,6:EQUB &0f,zp,1:EQUB &0f,zp,&FF-6 :STOP:RTS:.be :CHECK:EQUS"BBS0 page cross",dresult}
+   ENDIF
 
    TIME 2+1 :LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
    TIME 3+1 :LDA#128::BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
@@ -420,142 +461,224 @@ ORG &2000         ; code origin
 
    TIME 2 :TSX:TSX:STOP:CHECK:EQUS"TSX",dresult
    TIME 2 :TXA:TXA:STOP:CHECK:EQUS"TXA",dresult
-   TIME 4 :TSX:TXS:TSX:TXS:STOP:CHECK:EQUS"TSX",dresult
+   TSX:TIME 2 :TXS:TXS:STOP:CHECK:EQUS"TXS",dresult
    TIME 2 :TYA:TYA:STOP:CHECK:EQUS"TYA",dresult
    JSR printstring:EQUS"Testing CLI ( warning may fail)",13,dterm
    CLI:TIME 2 :CLI:CLI:STOP:CHECK:EQUS"CLI",dresult
 
    IF cpu = 0
-   JSR printstring:EQUS"Done!",13,"Checking undocumented instructions...",13,dterm
+      JSR printstring:EQUS"Done!",13,"Checking undocumented instructions...",13,dterm
 
-   TIME 2 :EQUB &4B,imm:EQUB &4B,imm:STOP:CHECK:EQUS"&4B ALR ( ASR) #imm",dresult
-   TIME 2 :EQUB &0B,imm:EQUB &0B,imm:STOP:CHECK:EQUS"&0B ANC ( ANC) #imm",dresult
-   TIME 2 :EQUB &2B,imm:EQUB &2B,imm:STOP:CHECK:EQUS"&0B ANC ( ANC 2) #imm",dresult
-   TIME 2 :EQUB &8B,imm:EQUB &8B,imm:STOP:CHECK:EQUS"&8B ANE ( XAA) #imm",dresult
-   TIME 2 :EQUB &6B,imm:EQUB &6B,imm:STOP:CHECK:EQUS"&6B ARR #imm",dresult
-   TIME 5 :EQUB&C7,zp:EQUB&C7,zp:STOP:CHECK:EQUS"&C7 DCP (DCM) zp",dresult
-   TIME 6 :EQUB&D7,zpx:EQUB&D7,zpx:STOP:CHECK:EQUS"&D7 DCP (DCM) zpx",dresult
-   TIME 6 :UNDOC3BYTE &CF,addrFF :STOP:CHECK:EQUS"&CF DCP (DCM) addrFF",dresult
-   TIME 7 :UNDOC3BYTE &DF,addrFE :STOP:CHECK:EQUS"&DF DCP (DCM) addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &DF,addrFF :STOP:CHECK:EQUS"&DF DCP (DCM) addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &DB,addrFE :STOP:CHECK:EQUS"&DB DCP (DCM) addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &DB,addrFF :STOP:CHECK:EQUS"&DB DCP (DCM) addrFF,Y",dresult
-   TIME 8 :EQUB&C3,indirFE:EQUB&C3,indirFE:STOP:CHECK:EQUS"&C3 DCP (DCM) (indirFE,X)",dresult
-   TIME 8 :EQUB&D3,indirFE:EQUB&D3,indirFE:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFE),Y",dresult
-   TIME 8 :EQUB&D3,indirFF:EQUB&D3,indirFF:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFF),Y",dresult
-   TIME 5 :EQUB&E7,zp:EQUB&E7,zp:STOP:CHECK:EQUS"&E7 ISC (ISB,INS) zp",dresult
-   TIME 6 :EQUB&F7,zpx:EQUB&F7,zpx:STOP:CHECK:EQUS"&F7 ISC (ISB,INS) zpx",dresult
-   TIME 6 :UNDOC3BYTE &EF,addrFF:STOP:CHECK:EQUS"&EF ISC (ISB,INS) addrFF",dresult
-   TIME 7 :UNDOC3BYTE &FF,addrFE:STOP:CHECK:EQUS"&FF ISC (ISB,INS) addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &FF,addrFF:STOP:CHECK:EQUS"&FF ISC (ISB,INS) addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &FB,addrFE:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &FB,addrFF:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFF,Y",dresult
-   TIME 8 :EQUB&E3,indirFE:EQUB&E3,indirFE:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE,X)",dresult
-   TIME 8 :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
-   TIME 8 :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
-   TSX:STX zpx:LDX#1:TIME 4 :UNDOC3BYTE &BB,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
-   TSX:STX zpx:LDX#1:TIME 5 :UNDOC3BYTE &BB,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
-   TIME 3 :EQUB&A7,zp:EQUB&A7,zp:STOP:CHECK:EQUS"&A7 LAX zp",dresult
-   TIME 4 :EQUB&B7,zpx:EQUB&B7,zpx:STOP:CHECK:EQUS"&B7 LAX zpx",dresult
-   TIME 4 :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
-   TIME 4 :UNDOC3BYTE &BF,addrFE:STOP:CHECK:EQUS"&BF LAX addrFE,Y",dresult
-   TIME 5 :UNDOC3BYTE &BF,addrFF:STOP:CHECK:EQUS"&BF LAX addrFF,Y",dresult
-   TIME 7 :EQUB&A3,indirFE:EQUB&A3,indirFE:STOP:CHECK:EQUS"&A3 LAX (indirFE,X)",dresult
-   TIME 5 :EQUB&B3,indirFE:EQUB&B3,indirFE:STOP:CHECK:EQUS"&B3 LAX (indirFE),Y",dresult
-   TIME 6 :EQUB&B3,indirFF:EQUB&B3,indirFF:STOP:CHECK:EQUS"&B3 LAX (indirFF),Y",dresult
-   TIME 2 :EQUB&AB,imm:EQUB&AB,imm:STOP:CHECK:EQUS"&AB LXA #imm",dresult
-   TIME 5 :EQUB&27,zp:EQUB&27,zp:STOP:CHECK:EQUS"&27 RLA zp",dresult
-   TIME 6 :EQUB&37,zpx:EQUB&37,zpx:STOP:CHECK:EQUS"&37 RLA zpx",dresult
-   TIME 6 :UNDOC3BYTE &2F,addrFF:STOP:CHECK:EQUS"&2F RLA addrFF",dresult
-   TIME 7 :UNDOC3BYTE &3F,addrFE:STOP:CHECK:EQUS"&3F RLA addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &3F,addrFF:STOP:CHECK:EQUS"&3F RLA addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &3B,addrFE:STOP:CHECK:EQUS"&3B RLA addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &3B,addrFF:STOP:CHECK:EQUS"&3B RLA addrFF,Y",dresult
-   TIME 8 :EQUB&23,indirFE:EQUB&23,indirFE:STOP:CHECK:EQUS"&23 RLA (indirFE,X)",dresult
-   TIME 8 :EQUB&33,indirFE:EQUB&33,indirFE:STOP:CHECK:EQUS"&33 RLA (indirFE),Y",dresult
-   TIME 8 :EQUB&33,indirFF:EQUB&33,indirFF:STOP:CHECK:EQUS"&33 RLA (indirFF),Y",dresult
-   TIME 5 :EQUB&67,zp:EQUB&67,zp:STOP:CHECK:EQUS"&67 RRA zp",dresult
-   TIME 6 :EQUB&77,zpx:EQUB&77,zpx:STOP:CHECK:EQUS"&77 RRA zpx",dresult
-   TIME 6 :UNDOC3BYTE &6F,addrFF:STOP:CHECK:EQUS"&6F RRA addrFF",dresult
-   TIME 7 :UNDOC3BYTE &7F,addrFE:STOP:CHECK:EQUS"&7F RRA addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &7F,addrFF:STOP:CHECK:EQUS"&7F RRA addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &7B,addrFE:STOP:CHECK:EQUS"&7B RRA addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &7B,addrFF:STOP:CHECK:EQUS"&7B RRA addrFF,Y",dresult
-   TIME 8 :EQUB&63,indirFE:EQUB&63,indirFE:STOP:CHECK:EQUS"&63 RRA (indirFE,X)",dresult
-   TIME 8 :EQUB&73,indirFE:EQUB&73,indirFE:STOP:CHECK:EQUS"&73 RRA (indirFE),Y",dresult
-   TIME 8 :EQUB&73,indirFF:EQUB&73,indirFF:STOP:CHECK:EQUS"&73 RRA (indirFF),Y",dresult
-   TIME 3 :EQUB&87,zp:EQUB&87,zp:STOP:CHECK:EQUS"&87 SAX (AAX) zp",dresult
-   TIME 4 :EQUB&97,zpx:EQUB&97,zpx:STOP:CHECK:EQUS"&97 SAX (AAX) zpx",dresult
-   TIME 4 :UNDOC3BYTE &8F,addrFF:STOP:CHECK:EQUS"&8F SAX addrFF",dresult
-   TIME 6 :EQUB&83,indirFE:EQUB&83,indirFE:STOP:CHECK:EQUS"&83 SAX (AAX) (indirFE,X)",dresult
-   TIME 2 :EQUB&CB,imm:EQUB&CB,imm:STOP:CHECK:EQUS"&CB SBX #imm",dresult
-   TIME 5 :UNDOC3BYTE &9F,addrFE:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFE,Y",dresult
-   TIME 5 :UNDOC3BYTE &9F,addrFF:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFF,Y",dresult
-   TIME 6 :EQUB&93,indirFE:EQUB&93,indirFE:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFE),Y",dresult
-   TIME 6 :EQUB&93,indirFF:EQUB&93,indirFF:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFF),Y",dresult
-   TIME 5 :UNDOC3BYTE &9E,addrFE:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFE,Y",dresult
-   TIME 5 :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
-   TIME 5 :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
-   TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
-   TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
-   TIME 6 :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
-   TIME 7 :UNDOC3BYTE &1F,addrFE:STOP:CHECK:EQUS"&1F SLO (ASO) addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &1F,addrFF:STOP:CHECK:EQUS"&1F SLO (ASO) addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &1B,addrFE:STOP:CHECK:EQUS"&1B SLO (ASO) addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &1B,addrFF:STOP:CHECK:EQUS"&1B SLO (ASO) addrFF,Y",dresult
-   TIME 8 :EQUB&03,indirFE:EQUB&03,indirFE:STOP:CHECK:EQUS"&03 SLO (ASO) (indirFE,X)",dresult
-   TIME 8 :EQUB&13,indirFE:EQUB&13,indirFE:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFE),Y",dresult
-   TIME 8 :EQUB&13,indirFF:EQUB&13,indirFF:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFF),Y",dresult
-   TIME 5 :EQUB&47,zp:EQUB&47,zp:STOP:CHECK:EQUS"&47 SRE (LSE) zp",dresult
-   TIME 6 :EQUB&57,zpx:EQUB&57,zpx:STOP:CHECK:EQUS"&57 SRE (LSE) zpx",dresult
-   TIME 6 :UNDOC3BYTE &4F,addrFF:STOP:CHECK:EQUS"&4F SRE (LSE) addrFF",dresult
-   TIME 7 :UNDOC3BYTE &5F,addrFE:STOP:CHECK:EQUS"&5F SRE (LSE) addrFE,X",dresult
-   TIME 7 :UNDOC3BYTE &5F,addrFF:STOP:CHECK:EQUS"&5F SRE (LSE) addrFF,X",dresult
-   TIME 7 :UNDOC3BYTE &5B,addrFE:STOP:CHECK:EQUS"&5B SRE (LSE) addrFE,Y",dresult
-   TIME 7 :UNDOC3BYTE &5B,addrFF:STOP:CHECK:EQUS"&5B SRE (LSE) addrFF,Y",dresult
-   TIME 8 :EQUB&43,indirFE:EQUB&43,indirFE:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE,X)",dresult
-   TIME 8 :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
-   TIME 8 :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
-   TSX:STX zpx:TIME 5 :UNDOC3BYTE &9B,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
-   ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
-   TSX:STX zpx:TIME 5 :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
-   TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
-   TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
-   TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
-   TIME 2 :EQUB&5A:EQUB&5A:STOP:CHECK:EQUS"&5A NOP",dresult
-   TIME 2 :EQUB&7A:EQUB&7A:STOP:CHECK:EQUS"&7A NOP",dresult
-   TIME 2 :EQUB&DA:EQUB&DA:STOP:CHECK:EQUS"&DA NOP",dresult
-   TIME 2 :EQUB&FA:EQUB&FA:STOP:CHECK:EQUS"&FA NOP",dresult
-   TIME 2 :EQUB&80,imm:EQUB&80,imm:STOP:CHECK:EQUS"&80 NOP #imm",dresult
-   TIME 2 :EQUB&82,imm:EQUB&82,imm:STOP:CHECK:EQUS"&82 NOP #imm",dresult
-   TIME 2 :EQUB&89,imm:EQUB&89,imm:STOP:CHECK:EQUS"&89 NOP #imm",dresult
-   TIME 2 :EQUB&C2,imm:EQUB&C2,imm:STOP:CHECK:EQUS"&C2 NOP #imm",dresult
-   TIME 2 :EQUB&E2,imm:EQUB&E2,imm:STOP:CHECK:EQUS"&E2 NOP #imm",dresult
-   TIME 3 :EQUB&04,zp:EQUB&04,zp:STOP:CHECK:EQUS"&04 NOP zp",dresult
-   TIME 3 :EQUB&44,zp:EQUB&44,zp:STOP:CHECK:EQUS"&44 NOP zp",dresult
-   TIME 3 :EQUB&64,zp:EQUB&64,zp:STOP:CHECK:EQUS"&64 NOP zp",dresult
-   TIME 4 :EQUB&14,zpx:EQUB&14,zpx:STOP:CHECK:EQUS"&14 NOP zpx,X",dresult
-   TIME 4 :EQUB&34,zpx:EQUB&34,zpx:STOP:CHECK:EQUS"&34 NOP zpx,X",dresult
-   TIME 4 :EQUB&54,zpx:EQUB&54,zpx:STOP:CHECK:EQUS"&54 NOP zpx,X",dresult
-   TIME 4 :EQUB&74,zpx:EQUB&74,zpx:STOP:CHECK:EQUS"&74 NOP zpx,X",dresult
-   TIME 4 :EQUB&D4,zpx:EQUB&D4,zpx:STOP:CHECK:EQUS"&D4 NOP zpx,X",dresult
-   TIME 4 :EQUB&F4,zpx:EQUB&F4,zpx:STOP:CHECK:EQUS"&F4 NOP zpx,X",dresult
-   TIME 4 :UNDOC3BYTE &0C,addrFF:STOP:CHECK:EQUS"&0C NOP addrFF",dresult
-   TIME 4 :UNDOC3BYTE &1C,addrFE:STOP:CHECK:EQUS"&1C NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &1C,addrFF:STOP:CHECK:EQUS"&1C NOP addrFF,X",dresult
-   TIME 4 :UNDOC3BYTE &3C,addrFE:STOP:CHECK:EQUS"&3C NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &3C,addrFF:STOP:CHECK:EQUS"&3C NOP addrFF,X",dresult
-   TIME 4 :UNDOC3BYTE &5C,addrFE:STOP:CHECK:EQUS"&5C NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF,X",dresult
-   TIME 4 :UNDOC3BYTE &7C,addrFE:STOP:CHECK:EQUS"&7C NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &7C,addrFF:STOP:CHECK:EQUS"&7C NOP addrFF,X",dresult
-   TIME 4 :UNDOC3BYTE &DC,addrFE:STOP:CHECK:EQUS"&DC NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
-   TIME 4 :UNDOC3BYTE &FC,addrFE:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
-   TIME 5 :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult
+      TIME 2 :EQUB &4B,imm:EQUB &4B,imm:STOP:CHECK:EQUS"&4B ALR ( ASR) #imm",dresult
+      TIME 2 :EQUB &0B,imm:EQUB &0B,imm:STOP:CHECK:EQUS"&0B ANC ( ANC) #imm",dresult
+      TIME 2 :EQUB &2B,imm:EQUB &2B,imm:STOP:CHECK:EQUS"&0B ANC ( ANC 2) #imm",dresult
+      TIME 2 :EQUB &8B,imm:EQUB &8B,imm:STOP:CHECK:EQUS"&8B ANE ( XAA) #imm",dresult
+      TIME 2 :EQUB &6B,imm:EQUB &6B,imm:STOP:CHECK:EQUS"&6B ARR #imm",dresult
+      TIME 5 :EQUB&C7,zp:EQUB&C7,zp:STOP:CHECK:EQUS"&C7 DCP (DCM) zp",dresult
+      TIME 6 :EQUB&D7,zpx:EQUB&D7,zpx:STOP:CHECK:EQUS"&D7 DCP (DCM) zpx",dresult
+      TIME 6 :UNDOC3BYTE &CF,addrFF :STOP:CHECK:EQUS"&CF DCP (DCM) addrFF",dresult
+      TIME 7 :UNDOC3BYTE &DF,addrFE :STOP:CHECK:EQUS"&DF DCP (DCM) addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &DF,addrFF :STOP:CHECK:EQUS"&DF DCP (DCM) addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &DB,addrFE :STOP:CHECK:EQUS"&DB DCP (DCM) addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &DB,addrFF :STOP:CHECK:EQUS"&DB DCP (DCM) addrFF,Y",dresult
+      TIME 8 :EQUB&C3,indirFE:EQUB&C3,indirFE:STOP:CHECK:EQUS"&C3 DCP (DCM) (indirFE,X)",dresult
+      TIME 8 :EQUB&D3,indirFE:EQUB&D3,indirFE:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFE),Y",dresult
+      TIME 8 :EQUB&D3,indirFF:EQUB&D3,indirFF:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFF),Y",dresult
+      TIME 5 :EQUB&E7,zp:EQUB&E7,zp:STOP:CHECK:EQUS"&E7 ISC (ISB,INS) zp",dresult
+      TIME 6 :EQUB&F7,zpx:EQUB&F7,zpx:STOP:CHECK:EQUS"&F7 ISC (ISB,INS) zpx",dresult
+      TIME 6 :UNDOC3BYTE &EF,addrFF:STOP:CHECK:EQUS"&EF ISC (ISB,INS) addrFF",dresult
+      TIME 7 :UNDOC3BYTE &FF,addrFE:STOP:CHECK:EQUS"&FF ISC (ISB,INS) addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &FF,addrFF:STOP:CHECK:EQUS"&FF ISC (ISB,INS) addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &FB,addrFE:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &FB,addrFF:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFF,Y",dresult
+      TIME 8 :EQUB&E3,indirFE:EQUB&E3,indirFE:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE,X)",dresult
+      TIME 8 :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
+      TIME 8 :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
+      TSX:STX zpx:LDX#1:TIME 4 :UNDOC3BYTE &BB,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
+      TSX:STX zpx:LDX#1:TIME 5 :UNDOC3BYTE &BB,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
+      TIME 3 :EQUB&A7,zp:EQUB&A7,zp:STOP:CHECK:EQUS"&A7 LAX zp",dresult
+      TIME 4 :EQUB&B7,zpx:EQUB&B7,zpx:STOP:CHECK:EQUS"&B7 LAX zpx",dresult
+      TIME 4 :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
+      TIME 4 :UNDOC3BYTE &BF,addrFE:STOP:CHECK:EQUS"&BF LAX addrFE,Y",dresult
+      TIME 5 :UNDOC3BYTE &BF,addrFF:STOP:CHECK:EQUS"&BF LAX addrFF,Y",dresult
+      TIME 7 :EQUB&A3,indirFE:EQUB&A3,indirFE:STOP:CHECK:EQUS"&A3 LAX (indirFE,X)",dresult
+      TIME 5 :EQUB&B3,indirFE:EQUB&B3,indirFE:STOP:CHECK:EQUS"&B3 LAX (indirFE),Y",dresult
+      TIME 6 :EQUB&B3,indirFF:EQUB&B3,indirFF:STOP:CHECK:EQUS"&B3 LAX (indirFF),Y",dresult
+      TIME 2 :EQUB&AB,imm:EQUB&AB,imm:STOP:CHECK:EQUS"&AB LXA #imm",dresult
+      TIME 5 :EQUB&27,zp:EQUB&27,zp:STOP:CHECK:EQUS"&27 RLA zp",dresult
+      TIME 6 :EQUB&37,zpx:EQUB&37,zpx:STOP:CHECK:EQUS"&37 RLA zpx",dresult
+      TIME 6 :UNDOC3BYTE &2F,addrFF:STOP:CHECK:EQUS"&2F RLA addrFF",dresult
+      TIME 7 :UNDOC3BYTE &3F,addrFE:STOP:CHECK:EQUS"&3F RLA addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &3F,addrFF:STOP:CHECK:EQUS"&3F RLA addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &3B,addrFE:STOP:CHECK:EQUS"&3B RLA addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &3B,addrFF:STOP:CHECK:EQUS"&3B RLA addrFF,Y",dresult
+      TIME 8 :EQUB&23,indirFE:EQUB&23,indirFE:STOP:CHECK:EQUS"&23 RLA (indirFE,X)",dresult
+      TIME 8 :EQUB&33,indirFE:EQUB&33,indirFE:STOP:CHECK:EQUS"&33 RLA (indirFE),Y",dresult
+      TIME 8 :EQUB&33,indirFF:EQUB&33,indirFF:STOP:CHECK:EQUS"&33 RLA (indirFF),Y",dresult
+      TIME 5 :EQUB&67,zp:EQUB&67,zp:STOP:CHECK:EQUS"&67 RRA zp",dresult
+      TIME 6 :EQUB&77,zpx:EQUB&77,zpx:STOP:CHECK:EQUS"&77 RRA zpx",dresult
+      TIME 6 :UNDOC3BYTE &6F,addrFF:STOP:CHECK:EQUS"&6F RRA addrFF",dresult
+      TIME 7 :UNDOC3BYTE &7F,addrFE:STOP:CHECK:EQUS"&7F RRA addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &7F,addrFF:STOP:CHECK:EQUS"&7F RRA addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &7B,addrFE:STOP:CHECK:EQUS"&7B RRA addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &7B,addrFF:STOP:CHECK:EQUS"&7B RRA addrFF,Y",dresult
+      TIME 8 :EQUB&63,indirFE:EQUB&63,indirFE:STOP:CHECK:EQUS"&63 RRA (indirFE,X)",dresult
+      TIME 8 :EQUB&73,indirFE:EQUB&73,indirFE:STOP:CHECK:EQUS"&73 RRA (indirFE),Y",dresult
+      TIME 8 :EQUB&73,indirFF:EQUB&73,indirFF:STOP:CHECK:EQUS"&73 RRA (indirFF),Y",dresult
+      TIME 3 :EQUB&87,zp:EQUB&87,zp:STOP:CHECK:EQUS"&87 SAX (AAX) zp",dresult
+      TIME 4 :EQUB&97,zpx:EQUB&97,zpx:STOP:CHECK:EQUS"&97 SAX (AAX) zpx",dresult
+      TIME 4 :UNDOC3BYTE &8F,addrFF:STOP:CHECK:EQUS"&8F SAX addrFF",dresult
+      TIME 6 :EQUB&83,indirFE:EQUB&83,indirFE:STOP:CHECK:EQUS"&83 SAX (AAX) (indirFE,X)",dresult
+      TIME 2 :EQUB&CB,imm:EQUB&CB,imm:STOP:CHECK:EQUS"&CB SBX #imm",dresult
+      TIME 5 :UNDOC3BYTE &9F,addrFE:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFE,Y",dresult
+      TIME 5 :UNDOC3BYTE &9F,addrFF:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFF,Y",dresult
+      TIME 6 :EQUB&93,indirFE:EQUB&93,indirFE:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFE),Y",dresult
+      TIME 6 :EQUB&93,indirFF:EQUB&93,indirFF:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFF),Y",dresult
+      TIME 5 :UNDOC3BYTE &9E,addrFE:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFE,Y",dresult
+      TIME 5 :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
+      TIME 5 :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
+      TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
+      TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
+      TIME 6 :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
+      TIME 7 :UNDOC3BYTE &1F,addrFE:STOP:CHECK:EQUS"&1F SLO (ASO) addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &1F,addrFF:STOP:CHECK:EQUS"&1F SLO (ASO) addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &1B,addrFE:STOP:CHECK:EQUS"&1B SLO (ASO) addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &1B,addrFF:STOP:CHECK:EQUS"&1B SLO (ASO) addrFF,Y",dresult
+      TIME 8 :EQUB&03,indirFE:EQUB&03,indirFE:STOP:CHECK:EQUS"&03 SLO (ASO) (indirFE,X)",dresult
+      TIME 8 :EQUB&13,indirFE:EQUB&13,indirFE:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFE),Y",dresult
+      TIME 8 :EQUB&13,indirFF:EQUB&13,indirFF:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFF),Y",dresult
+      TIME 5 :EQUB&47,zp:EQUB&47,zp:STOP:CHECK:EQUS"&47 SRE (LSE) zp",dresult
+      TIME 6 :EQUB&57,zpx:EQUB&57,zpx:STOP:CHECK:EQUS"&57 SRE (LSE) zpx",dresult
+      TIME 6 :UNDOC3BYTE &4F,addrFF:STOP:CHECK:EQUS"&4F SRE (LSE) addrFF",dresult
+      TIME 7 :UNDOC3BYTE &5F,addrFE:STOP:CHECK:EQUS"&5F SRE (LSE) addrFE,X",dresult
+      TIME 7 :UNDOC3BYTE &5F,addrFF:STOP:CHECK:EQUS"&5F SRE (LSE) addrFF,X",dresult
+      TIME 7 :UNDOC3BYTE &5B,addrFE:STOP:CHECK:EQUS"&5B SRE (LSE) addrFE,Y",dresult
+      TIME 7 :UNDOC3BYTE &5B,addrFF:STOP:CHECK:EQUS"&5B SRE (LSE) addrFF,Y",dresult
+      TIME 8 :EQUB&43,indirFE:EQUB&43,indirFE:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE,X)",dresult
+      TIME 8 :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
+      TIME 8 :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
+      TSX:STX zpx:TIME 5 :UNDOC3BYTE &9B,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
+      ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
+      TSX:STX zpx:TIME 5 :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
+      TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
+      TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
+      TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
+      TIME 2 :EQUB&5A:EQUB&5A:STOP:CHECK:EQUS"&5A NOP",dresult
+      TIME 2 :EQUB&7A:EQUB&7A:STOP:CHECK:EQUS"&7A NOP",dresult
+      TIME 2 :EQUB&DA:EQUB&DA:STOP:CHECK:EQUS"&DA NOP",dresult
+      TIME 2 :EQUB&FA:EQUB&FA:STOP:CHECK:EQUS"&FA NOP",dresult
+      TIME 2 :EQUB&80,imm:EQUB&80,imm:STOP:CHECK:EQUS"&80 NOP #imm",dresult
+      TIME 2 :EQUB&82,imm:EQUB&82,imm:STOP:CHECK:EQUS"&82 NOP #imm",dresult
+      TIME 2 :EQUB&89,imm:EQUB&89,imm:STOP:CHECK:EQUS"&89 NOP #imm",dresult
+      TIME 2 :EQUB&C2,imm:EQUB&C2,imm:STOP:CHECK:EQUS"&C2 NOP #imm",dresult
+      TIME 2 :EQUB&E2,imm:EQUB&E2,imm:STOP:CHECK:EQUS"&E2 NOP #imm",dresult
+      TIME 3 :EQUB&04,zp:EQUB&04,zp:STOP:CHECK:EQUS"&04 NOP zp",dresult
+      TIME 3 :EQUB&44,zp:EQUB&44,zp:STOP:CHECK:EQUS"&44 NOP zp",dresult
+      TIME 3 :EQUB&64,zp:EQUB&64,zp:STOP:CHECK:EQUS"&64 NOP zp",dresult
+      TIME 4 :EQUB&14,zpx:EQUB&14,zpx:STOP:CHECK:EQUS"&14 NOP zpx,X",dresult
+      TIME 4 :EQUB&34,zpx:EQUB&34,zpx:STOP:CHECK:EQUS"&34 NOP zpx,X",dresult
+      TIME 4 :EQUB&54,zpx:EQUB&54,zpx:STOP:CHECK:EQUS"&54 NOP zpx,X",dresult
+      TIME 4 :EQUB&74,zpx:EQUB&74,zpx:STOP:CHECK:EQUS"&74 NOP zpx,X",dresult
+      TIME 4 :EQUB&D4,zpx:EQUB&D4,zpx:STOP:CHECK:EQUS"&D4 NOP zpx,X",dresult
+      TIME 4 :EQUB&F4,zpx:EQUB&F4,zpx:STOP:CHECK:EQUS"&F4 NOP zpx,X",dresult
+      TIME 4 :UNDOC3BYTE &0C,addrFF:STOP:CHECK:EQUS"&0C NOP addrFF",dresult
+      TIME 4 :UNDOC3BYTE &1C,addrFE:STOP:CHECK:EQUS"&1C NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &1C,addrFF:STOP:CHECK:EQUS"&1C NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &3C,addrFE:STOP:CHECK:EQUS"&3C NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &3C,addrFF:STOP:CHECK:EQUS"&3C NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &5C,addrFE:STOP:CHECK:EQUS"&5C NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &7C,addrFE:STOP:CHECK:EQUS"&7C NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &7C,addrFF:STOP:CHECK:EQUS"&7C NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &DC,addrFE:STOP:CHECK:EQUS"&DC NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &FC,addrFE:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
+      TIME 5 :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult
    ; untested BRK
-
+   ELSE
+      JSR printstring:EQUS"Done!",13,"Checking NOP instructions...",13,dterm
+      TIME 1 :UNDOC1BYTE &03:STOP:CHECK:EQUS"&03 NOP",dresult
+      TIME 1 :UNDOC1BYTE &07:STOP:CHECK:EQUS"&07 NOP",dresult
+      TIME 1 :UNDOC1BYTE &0B:STOP:CHECK:EQUS"&0B NOP",dresult
+      TIME 1 :UNDOC1BYTE &0F:STOP:CHECK:EQUS"&0F NOP",dresult
+      TIME 1 :UNDOC1BYTE &13:STOP:CHECK:EQUS"&13 NOP",dresult
+      TIME 1 :UNDOC1BYTE &17:STOP:CHECK:EQUS"&17 NOP",dresult
+      TIME 1 :UNDOC1BYTE &1B:STOP:CHECK:EQUS"&1B NOP",dresult
+      TIME 1 :UNDOC1BYTE &1F:STOP:CHECK:EQUS"&1F NOP",dresult
+      TIME 1 :UNDOC1BYTE &23:STOP:CHECK:EQUS"&23 NOP",dresult
+      TIME 1 :UNDOC1BYTE &27:STOP:CHECK:EQUS"&27 NOP",dresult
+      TIME 1 :UNDOC1BYTE &2B:STOP:CHECK:EQUS"&2B NOP",dresult
+      TIME 1 :UNDOC1BYTE &2F:STOP:CHECK:EQUS"&2F NOP",dresult
+      TIME 1 :UNDOC1BYTE &33:STOP:CHECK:EQUS"&33 NOP",dresult
+      TIME 1 :UNDOC1BYTE &37:STOP:CHECK:EQUS"&37 NOP",dresult
+      TIME 1 :UNDOC1BYTE &3B:STOP:CHECK:EQUS"&3B NOP",dresult
+      TIME 1 :UNDOC1BYTE &3F:STOP:CHECK:EQUS"&3F NOP",dresult
+      TIME 1 :UNDOC1BYTE &43:STOP:CHECK:EQUS"&43 NOP",dresult
+      TIME 1 :UNDOC1BYTE &47:STOP:CHECK:EQUS"&47 NOP",dresult
+      TIME 1 :UNDOC1BYTE &4B:STOP:CHECK:EQUS"&4B NOP",dresult
+      TIME 1 :UNDOC1BYTE &4F:STOP:CHECK:EQUS"&4F NOP",dresult
+      TIME 1 :UNDOC1BYTE &53:STOP:CHECK:EQUS"&53 NOP",dresult
+      TIME 1 :UNDOC1BYTE &57:STOP:CHECK:EQUS"&57 NOP",dresult
+      TIME 1 :UNDOC1BYTE &5B:STOP:CHECK:EQUS"&5B NOP",dresult
+      TIME 1 :UNDOC1BYTE &5F:STOP:CHECK:EQUS"&5F NOP",dresult
+      TIME 1 :UNDOC1BYTE &63:STOP:CHECK:EQUS"&63 NOP",dresult
+      TIME 1 :UNDOC1BYTE &67:STOP:CHECK:EQUS"&67 NOP",dresult
+      TIME 1 :UNDOC1BYTE &6B:STOP:CHECK:EQUS"&6B NOP",dresult
+      TIME 1 :UNDOC1BYTE &6F:STOP:CHECK:EQUS"&6F NOP",dresult
+      TIME 1 :UNDOC1BYTE &73:STOP:CHECK:EQUS"&73 NOP",dresult
+      TIME 1 :UNDOC1BYTE &77:STOP:CHECK:EQUS"&77 NOP",dresult
+      TIME 1 :UNDOC1BYTE &7B:STOP:CHECK:EQUS"&7B NOP",dresult
+      TIME 1 :UNDOC1BYTE &7F:STOP:CHECK:EQUS"&7F NOP",dresult
+      TIME 1 :UNDOC1BYTE &83:STOP:CHECK:EQUS"&83 NOP",dresult
+      TIME 1 :UNDOC1BYTE &87:STOP:CHECK:EQUS"&87 NOP",dresult
+      TIME 1 :UNDOC1BYTE &8B:STOP:CHECK:EQUS"&8B NOP",dresult
+      TIME 1 :UNDOC1BYTE &8F:STOP:CHECK:EQUS"&8F NOP",dresult
+      TIME 1 :UNDOC1BYTE &93:STOP:CHECK:EQUS"&93 NOP",dresult
+      TIME 1 :UNDOC1BYTE &97:STOP:CHECK:EQUS"&97 NOP",dresult
+      TIME 1 :UNDOC1BYTE &9B:STOP:CHECK:EQUS"&9B NOP",dresult
+      TIME 1 :UNDOC1BYTE &9F:STOP:CHECK:EQUS"&9F NOP",dresult
+      TIME 1 :UNDOC1BYTE &A3:STOP:CHECK:EQUS"&A3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &A7:STOP:CHECK:EQUS"&A7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &AB:STOP:CHECK:EQUS"&AB NOP",dresult
+      TIME 1 :UNDOC1BYTE &AF:STOP:CHECK:EQUS"&AF NOP",dresult
+      TIME 1 :UNDOC1BYTE &B3:STOP:CHECK:EQUS"&B3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &B7:STOP:CHECK:EQUS"&B7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &BB:STOP:CHECK:EQUS"&BB NOP",dresult
+      TIME 1 :UNDOC1BYTE &BF:STOP:CHECK:EQUS"&BF NOP",dresult
+      TIME 1 :UNDOC1BYTE &C3:STOP:CHECK:EQUS"&C3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &C7:STOP:CHECK:EQUS"&C7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &CB:STOP:CHECK:EQUS"&CB NOP",dresult
+      TIME 1 :UNDOC1BYTE &CF:STOP:CHECK:EQUS"&CF NOP",dresult
+      TIME 1 :UNDOC1BYTE &D3:STOP:CHECK:EQUS"&D3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &D7:STOP:CHECK:EQUS"&D7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &DB:STOP:CHECK:EQUS"&DB NOP",dresult
+      TIME 1 :UNDOC1BYTE &DF:STOP:CHECK:EQUS"&DF NOP",dresult
+      TIME 1 :UNDOC1BYTE &E3:STOP:CHECK:EQUS"&E3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &E7:STOP:CHECK:EQUS"&E7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &EB:STOP:CHECK:EQUS"&EB NOP",dresult
+      TIME 1 :UNDOC1BYTE &EF:STOP:CHECK:EQUS"&EF NOP",dresult
+      TIME 1 :UNDOC1BYTE &F3:STOP:CHECK:EQUS"&F3 NOP",dresult
+      TIME 1 :UNDOC1BYTE &F7:STOP:CHECK:EQUS"&F7 NOP",dresult
+      TIME 1 :UNDOC1BYTE &FB:STOP:CHECK:EQUS"&FB NOP",dresult
+      TIME 1 :UNDOC1BYTE &FF:STOP:CHECK:EQUS"&FF NOP",dresult
+      TIME 2 :UNDOC2BYTE &02,imm:STOP:CHECK:EQUS"&02 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &22,imm:STOP:CHECK:EQUS"&22 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &42,imm:STOP:CHECK:EQUS"&42 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &62,imm:STOP:CHECK:EQUS"&62 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &82,imm:STOP:CHECK:EQUS"&82 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &C2,imm:STOP:CHECK:EQUS"&C2 NOP #imm",dresult
+      TIME 2 :UNDOC2BYTE &E2,imm:STOP:CHECK:EQUS"&E2 NOP #imm",dresult
+      TIME 3 :UNDOC2BYTE &44,zp:STOP:CHECK:EQUS"&44 NOP zp",dresult
+      TIME 4 :UNDOC2BYTE &54,zpx:STOP:CHECK:EQUS"&54 NOP zpx",dresult
+      TIME 4 :UNDOC2BYTE &D4,zpx:STOP:CHECK:EQUS"&D4 NOP zpx",dresult
+      TIME 4 :UNDOC2BYTE &F4,zpx:STOP:CHECK:EQUS"&F4 NOP zpx",dresult
+      TIME 8 :UNDOC3BYTE &5C,addrFE:STOP:CHECK:EQUS"&5C NOP addrFE,X",dresult
+      TIME 8 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &DC,addrFE:STOP:CHECK:EQUS"&DC NOP addrFE,X",dresult
+      TIME 4 :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
+      TIME 4 :UNDOC3BYTE &FC,addrFE:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
+      TIME 4 :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult
    ENDIF
 
    JSR printstring:EQUS"Done!",13,dterm
