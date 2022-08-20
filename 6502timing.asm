@@ -115,7 +115,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.11",13
+   EQUS "Version : 0.12",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
@@ -565,9 +565,9 @@ ORG &2000         ; code origin
       TIME 6+(2*Ta2) :EQUB&93,indirFE:EQUB&93,indirFE:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFE),Y",dresult
       TIME 6+(1*Ta2) :EQUB&93,indirFF:EQUB&93,indirFF:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFF),Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9E,addrFE:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFE,Y",dresult
-      TIME 5+(3*Ta2) :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
+      TIME 5+(1*Ta2) :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
-      TIME 5+(3*Ta2) :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
+      TIME 5+(1*Ta2) :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
       TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
       TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
       TIME 6+(4*Ta2) :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
@@ -590,7 +590,7 @@ ORG &2000         ; code origin
       TIME 8+(4*Ta2) :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
       TSX:STX zpx:TIME 5+(3*Ta2) :UNDOC3BYTE &9B,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
       ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
-      TSX:STX zpx:TIME 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y ???",dresult
+      TSX:STX zpx:TIME 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y unstable",dresult
       TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
       TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
       TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
@@ -805,7 +805,7 @@ ORG &2000         ; code origin
 	LDA #32
 	JSR osasci
 	INY
-	CPY #35
+	CPY #37
 	BMI prcolumn
 	TXA
 	JSR PrHex
