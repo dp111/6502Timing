@@ -102,9 +102,9 @@ ORG &2000         ; code origin
 .start
    JSR printstring
    IF cpu
-      EQUS "65C12 instruction timing checking"
+      EQUS "65C12 instruction timing checker"
    ELSE
-      EQUS "6502 instruction timing checking"
+      EQUS "6502 instruction timing checker"
    ENDIF
 
    IF TARGET = 0
@@ -119,7 +119,9 @@ ORG &2000         ; code origin
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
-   EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
+   EQUS " 01 means 1 Clock Cycle too quick",13
+   EQUS " FF means 1 Clock Cycle too long",13
+   EQUS "    etc",13,13
    EQUS "Checking documented instructions...",13,14,dterm
 
    ; setup indirect pointers
