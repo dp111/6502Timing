@@ -115,13 +115,14 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.13",13
+   EQUS "Version : 0.14",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
    EQUS " 01 means 1 Clock Cycle too quick",13
    EQUS " FF means 1 Clock Cycle too long",13
-   EQUS "    etc",13,13
+   EQUS "    etc",13,13,dterm
+   JSR printstring:
    EQUS "Checking documented instructions...",13,14,dterm
 
    ; setup indirect pointers
