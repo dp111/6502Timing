@@ -102,7 +102,7 @@ ORG &2000         ; code origin
 .start
    JSR printstring
    IF cpu
-      EQUS "65C02 instruction timing checking"
+      EQUS "65C12 instruction timing checking"
    ELSE
       EQUS "6502 instruction timing checking"
    ENDIF
@@ -115,7 +115,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.12",13
+   EQUS "Version : 0.13",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
