@@ -118,6 +118,7 @@ ORG &2000         ; code origin
    EQUS "Version : 0.13",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
+   EQUS "Note : X = 1 and Y = 1",13
    EQUS "(01=1 Cycle short, FF=1 Cycle long,etc)",13,13
    EQUS "Checking documented instructions...",13,14,dterm
 
