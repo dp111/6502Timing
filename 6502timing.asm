@@ -474,7 +474,12 @@ ORG &2000         ; code origin
    TIME 4 :STY zpx,X:STY zpx,X:STOP:CHECK:EQUS"STY zpx,X",dresult
    TIME 4+(2*Tadjust) :STY addrFE:STY addrFE :STOP:CHECK:EQUS"STY addrFE",dresult
 
+   IF (cpu AND (TARGET = 1))
+      TIME 5+(3*Tadjust) :EQUB&03:STA addrFE,X:EQUB&03:STA addrFE,X:STOP:CHECK:EQUS"NOP1: STA addrFE,X",dresult
+   ENDIF
+
    IF cpu
+
       TIME 3 :STZ zp:STZ zp:STOP:CHECK:EQUS"STZ zp",dresult
       TIME 4 :STZ zpx,X:STZ zpx,X:STOP:CHECK:EQUS"STZ zpx,X",dresult
       TIME 4+(2*Tadjust) :STZ addrFE:STZ addrFE :STOP:CHECK:EQUS"STZ addrFE",dresult
