@@ -13,13 +13,10 @@ My build line is ( it assumes beebasm directory is in the directory above)
 
 This creates SSDs that can be shift breaked to start the test.
 
-6502timing.ssd    BBC 6502 instruction timing test suite
-
-6502timing1M.ssd  BBC 6502 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching
-
-65C12timing.ssd   BBC Master 65C12 instruction timing test suite
-
-65C12timing1M.ssd BBC Master 65C12 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching
+|6502timing.ssd    |BBC 6502 instruction timing test suite|
+|6502timing1M.ssd  |BBC 6502 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
+|65C12timing.ssd   |BBC Master 65C12 instruction timing test suite|
+|65C12timing1M.ssd |BBC Master 65C12 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
 
 
 
