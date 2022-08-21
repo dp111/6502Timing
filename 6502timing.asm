@@ -476,6 +476,7 @@ ORG &2000         ; code origin
 
    IF (cpu AND (TARGET = 1))
       TIME 5+(3*Tadjust) :EQUB&03:STA addrFE,X:EQUB&03:STA addrFE,X:STOP:CHECK:EQUS"NOP1: STA addrFE,X",dresult
+      TIME 4+(0*Tadjust) :LDA &FE34 :LDA &FE34 :STOP:CHECK:EQUS"LDA &FE34 (no stretch)",dresult
    ENDIF
 
    IF cpu
