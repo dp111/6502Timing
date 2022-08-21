@@ -64,8 +64,7 @@ ENDMACRO
 MACRO TIME time
 	LDA #time+timeoffset
 	STA viabase+4
-	LDA #0
-	STA viabase+5
+	STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
 ENDMACRO
 
 MACRO STOP
@@ -115,7 +114,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.14",13
+   EQUS "Version : 0.15",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -191,15 +190,15 @@ ORG &2000         ; code origin
 
    SEC:TIME 2 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
    CLC:TIME 3 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC taken",dresult
-   {BLOCKCOPY branchaddress-13, bs,be : .bs CLC:TIME 7 :BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult}
+   {BLOCKCOPY branchaddress-11, bs,be : .bs CLC:TIME 7 :BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult}
 
    CLC:TIME 2 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS not taken",dresult
    SEC:TIME 3 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
-   {BLOCKCOPY branchaddress-13, bs,be : .bs SEC:TIME 7 :BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult}
+   {BLOCKCOPY branchaddress-11, bs,be : .bs SEC:TIME 7 :BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult}
 
    TIME 4 :LDA#1:LDA#1:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ not taken",dresult
    TIME 5 :LDA#0:LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
-   {BLOCKCOPY branchaddress-14, bs,be : .bs TIME 8 :LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
 
    IF cpu
       TIME 2 :BIT #imm:BIT #imm:STOP:CHECK:EQUS"BIT #imm",dresult
@@ -236,15 +235,15 @@ ORG &2000         ; code origin
 
    TIME 2+1 :LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
    TIME 3+1 :LDA#128::BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
-   {BLOCKCOPY branchaddress-14, bs,be : .bs TIME 8 :LDA#128:BMI*+4:.b BMI*+6:BMI *+2:BMI b:STOP:RTS:.be : CHECK: EQUS"BMI page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#128:BMI*+4:.b BMI*+6:BMI *+2:BMI b:STOP:RTS:.be : CHECK: EQUS"BMI page cross",dresult}
 
    TIME 2+1 :LDA#0:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE not taken",dresult
    TIME 3+1 :LDA#1:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE taken",dresult
-   {BLOCKCOPY branchaddress-14, bs,be : .bs TIME 8 :LDA#1:BNE*+4:.b BNE*+6:BNE *+2:BNE b:STOP:RTS:.be : CHECK: EQUS"BNE page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#1:BNE*+4:.b BNE*+6:BNE *+2:BNE b:STOP:RTS:.be : CHECK: EQUS"BNE page cross",dresult}
 
    TIME 2+1 :LDA#128:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL not taken",dresult
    TIME 3+1 :LDA#0:BPL*+2:BPL*+2:STOP:CHECK:EQUS"BPL taken",dresult
-   {BLOCKCOPY branchaddress-14, bs,be : .bs TIME 8 :LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#0:BPL*+4:.b BPL*+6:BPL *+2:BPL b:STOP:RTS:.be : CHECK: EQUS"BPL page cross",dresult}
 
    IF cpu
       TIME 3 :BRA*+2:BRA*+2:STOP:CHECK:EQUS"BRA taken",dresult
@@ -253,11 +252,11 @@ ORG &2000         ; code origin
 
    BIT indirFF:TIME 2 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
    CLV:TIME 3 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
-   {BLOCKCOPY branchaddress-13, bs,be : .bs CLV:TIME 7 :BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult}
+   {BLOCKCOPY branchaddress-11, bs,be : .bs CLV:TIME 7 :BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult}
 
    CLV:TIME 2 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS not taken",dresult
    BIT indirFF:TIME 3 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS taken",dresult
-   {BLOCKCOPY branchaddress-14, bs,be : .bs BIT indirFF: TIME 7 :BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs BIT indirFF: TIME 7 :BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult}
    RESET
    TIME 2 :CLC:CLC:STOP:CHECK:EQUS"CLC",dresult
    TIME 2 :CLD:CLD:STOP:CHECK:EQUS"CLD",dresult
