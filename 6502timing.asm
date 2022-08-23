@@ -67,6 +67,13 @@ MACRO TIME time
 	STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
 ENDMACRO
 
+MACRO TIMELDAZERO time
+	LDA #time+timeoffset
+	STA viabase+4
+   LDA #0
+	STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
+ENDMACRO
+
 MACRO STOP
 	LDA viabase+4
 ENDMACRO
@@ -114,7 +121,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.15",13
+   EQUS "Version : 0.16",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -146,7 +153,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"ADC addrFF,X",dresult
    TIME 4+(2*Tadjust) :ADC addrFE,Y:ADC addrFE,Y:STOP:CHECK:EQUS"ADC addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :ADC addrFF,Y:ADC addrFF,Y:STOP:CHECK:EQUS"ADC addrFF,Y",dresult
-   TIME 6 :ADC (indirFE,X):ADC (indirFE,X):STOP:CHECK:EQUS"ADC (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :ADC (indirFE+1,X):ADC (indirFE+1,X) : STOP:CHECK:EQUS"ADC (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"ADC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y",dresult
 
@@ -161,7 +168,7 @@ ORG &2000         ; code origin
    SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpu:ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"SED ADC addrFF,X",dresult
    SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpu:ADC addrFE,Y:ADC addrFE,Y:STOP:CHECK:EQUS"SED ADC addrFE,Y",dresult
    SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpu:ADC addrFF,Y:ADC addrFF,Y:STOP:CHECK:EQUS"SED ADC addrFF,Y",dresult
-   SED:TIME 6 +cpu:ADC (indirFE,X):ADC (indirFE,X):STOP:CHECK:EQUS"SED ADC (indirFE,X)",dresult
+   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpu:ADC (indirFE+1,X):ADC (indirFE+1,X):STOP:CHECK:EQUS"SED ADC (indirFE+1,X)",dresult
    SED:TIME 5+(1*Tadjust) +cpu:ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"SED ADC (indirFE),Y",dresult
    SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpu:ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y",dresult
 
@@ -177,9 +184,9 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :AND addrFF,X:AND addrFF,X:STOP:CHECK:EQUS"AND addrFF,X",dresult
    TIME 4+(2*Tadjust) :AND addrFE,Y:AND addrFE,Y:STOP:CHECK:EQUS"AND addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :AND addrFF,Y:AND addrFF,Y:STOP:CHECK:EQUS"AND addrFF,Y",dresult
-   TIME 6 :AND (indirFE,X):AND (indirFE,X):STOP:CHECK:EQUS"AND (indirFE,X)",dresult
-   TIME 5+(1*Tadjust)  :AND (indirFE),Y:AND (indirFE),Y:STOP:CHECK:EQUS"AND (indirFE),Y",dresult
-   TIME 6+(2*Tadjust)  :AND (indirFF),Y:AND (indirFF),Y:STOP:CHECK:EQUS"AND (indirFF),Y",dresult
+   TIME 6+(2*Tadjust) :AND (indirFE+1,X):AND (indirFE+1,X):STOP:CHECK:EQUS"AND (indirFE+1,X)",dresult
+   TIME 5+(1*Tadjust) :AND (indirFE),Y:AND (indirFE),Y:STOP:CHECK:EQUS"AND (indirFE),Y",dresult
+   TIME 6+(2*Tadjust) :AND (indirFF),Y:AND (indirFF),Y:STOP:CHECK:EQUS"AND (indirFF),Y",dresult
 
    TIME 2 :ASL A:ASL A:STOP:CHECK:EQUS"ASL A",dresult
    TIME 5 :ASL zp:ASL zp:STOP:CHECK:EQUS"ASL zp",dresult
@@ -230,7 +237,7 @@ ORG &2000         ; code origin
       TIME 10 :EQUB &Ff,zp,3:EQUB &Ff,zp,3:EQUB &Ff,zp,3:EQUB &Ff,zp,3:STOP:CHECK: EQUS"BBS7 not taken",dresult
 
       ; Todo Page crossing ( needs work )
-      {BLOCKCOPY branchaddress-14, bs,be : .bs TIME 12 :LDA#0::EQUB &0f,zp,3:EQUB &0f,zp,6:EQUB &0f,zp,1:EQUB &0f,zp,&FF-6 :STOP:RTS:.be :CHECK:EQUS"BBS0 page cross",dresult}
+      {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 12 :LDA#0::EQUB &0f,zp,3:EQUB &0f,zp,6:EQUB &0f,zp,1:EQUB &0f,zp,&FF-6 :STOP:RTS:.be :CHECK:EQUS"BBS0 page cross",dresult}
    ENDIF
 
    TIME 2+1 :LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
@@ -274,7 +281,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :CMP addrFF,X:CMP addrFF,X:STOP:CHECK:EQUS"CMP addrFF,X",dresult
    TIME 4+(2*Tadjust) :CMP addrFE,Y:CMP addrFE,Y:STOP:CHECK:EQUS"CMP addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :CMP addrFF,Y:CMP addrFF,Y:STOP:CHECK:EQUS"CMP addrFF,Y",dresult
-   TIME 6 :CMP (indirFE,X):CMP (indirFE,X):STOP:CHECK:EQUS"CMP (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :CMP (indirFE+1,X):CMP (indirFE+1,X):STOP:CHECK:EQUS"CMP (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :CMP (indirFE),Y:CMP (indirFE),Y:STOP:CHECK:EQUS"CMP (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :CMP (indirFF),Y:CMP (indirFF),Y:STOP:CHECK:EQUS"CMP (indirFF),Y",dresult
 
@@ -309,7 +316,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :EOR addrFF,X:EOR addrFF,X:STOP:CHECK:EQUS"EOR addrFF,X",dresult
    TIME 4+(2*Tadjust) :EOR addrFE,Y:EOR addrFE,Y:STOP:CHECK:EQUS"EOR addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :EOR addrFF,Y:EOR addrFF,Y:STOP:CHECK:EQUS"EOR addrFF,Y",dresult
-   TIME 6 :EOR (indirFE,X):EOR (indirFE,X):STOP:CHECK:EQUS"EOR (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :EOR (indirFE+1,X):EOR (indirFE+1,X):STOP:CHECK:EQUS"EOR (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :EOR (indirFE),Y:EOR (indirFE),Y:STOP:CHECK:EQUS"EOR (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :EOR (indirFF),Y:EOR (indirFF),Y:STOP:CHECK:EQUS"EOR (indirFF),Y",dresult
 
@@ -348,7 +355,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :LDA addrFF,X:LDA addrFF,X:STOP:CHECK:EQUS"LDA addrFF,X",dresult
    TIME 4+(2*Tadjust) :LDA addrFE,Y:LDA addrFE,Y:STOP:CHECK:EQUS"LDA addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :LDA addrFF,Y:LDA addrFF,Y:STOP:CHECK:EQUS"LDA addrFF,Y",dresult
-   TIME 6 :LDA (indirFE,X):LDA (indirFE,X):STOP:CHECK:EQUS"LDA (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :LDA (indirFE+1,X):LDA (indirFE+1,X):STOP:CHECK:EQUS"LDA (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :LDA (indirFE),Y:LDA (indirFE),Y:STOP:CHECK:EQUS"LDA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :LDA (indirFF),Y:LDA (indirFF),Y:STOP:CHECK:EQUS"LDA (indirFF),Y",dresult
 
@@ -386,9 +393,9 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :ORA addrFF,X:ORA addrFF,X:STOP:CHECK:EQUS"ORA addrFF,X",dresult
    TIME 4+(2*Tadjust) :ORA addrFE,Y:ORA addrFE,Y:STOP:CHECK:EQUS"ORA addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :ORA addrFF,Y:ORA addrFF,Y:STOP:CHECK:EQUS"ORA addrFF,Y",dresult
-   TIME 6 :ORA (indirFE,X):ORA (indirFE,X):STOP:CHECK:EQUS"ORA (indirFE,X)",dresult
-   TIME 5+(1*Tadjust)  :ORA (indirFE),Y:ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
-   TIME 6+(2*Tadjust)  :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
+   TIME 6+(2*Tadjust) :ORA (indirFE+1,X):ORA (indirFE+1,X):STOP:CHECK:EQUS"ORA (indirFE+1,X)",dresult
+   TIME 5+(1*Tadjust) :ORA (indirFE),Y:ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
+   TIME 6+(2*Tadjust) :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
 
    TIME 3 :PHA:PHA:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHA",dresult
    TIME 3 :PHP:PHP:STOP:PLP:PLP:CHECK:EQUS"PHP",dresult
@@ -432,7 +439,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SBC addrFF,X",dresult
    TIME 4+(2*Tadjust) :SBC addrFE,Y:SBC addrFE,Y:STOP:CHECK:EQUS"SBC addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :SBC addrFF,Y:SBC addrFF,Y:STOP:CHECK:EQUS"SBC addrFF,Y",dresult
-   TIME 6 :SBC (indirFE,X):SBC (indirFE,X):STOP:CHECK:EQUS"SBC (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :SBC (indirFE+1,X):SBC (indirFE+1,X):STOP:CHECK:EQUS"SBC (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SBC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y",dresult
 
@@ -447,7 +454,7 @@ ORG &2000         ; code origin
    SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpu:SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SED SBC addrFF,X",dresult
    SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpu:SBC addrFE,Y:SBC addrFE,Y:STOP:CHECK:EQUS"SED SBC addrFE,Y",dresult
    SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpu:SBC addrFF,Y:SBC addrFF,Y:STOP:CHECK:EQUS"SED SBC addrFF,Y",dresult
-   SED:TIME 6 +cpu:SBC (indirFE,X):SBC (indirFE,X):STOP:CHECK:EQUS"SED SBC (indirFE,X)",dresult
+   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpu:SBC (indirFE+1,X):SBC (indirFE+1,X):STOP:CHECK:EQUS"SED SBC (indirFE+1,X)",dresult
    SED:TIME 5+(1*Tadjust) +cpu:SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SED SBC (indirFE),Y",dresult
    SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpu:SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y",dresult
 
@@ -464,7 +471,7 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust)+(2*Ta2) :STA addrFF,X:STA addrFF,X:STOP:CHECK:EQUS"STA addrFF,X",dresult
    TIME 5+(3*Tadjust) :STA addrFE,Y:STA addrFE,Y:STOP:CHECK:EQUS"STA addrFE,Y",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :STA addrFF,Y:STA addrFF,Y:STOP:CHECK:EQUS"STA addrFF,Y",dresult
-   TIME 6 :STA (indirFE,X):STA (indirFE,X):STOP:CHECK:EQUS"STA (indirFE,X)",dresult
+   TIME 6+(2*Tadjust) :STA (indirFE+1,X):STA (indirFE+1,X):STOP:CHECK:EQUS"STA (indirFE+1,X)",dresult
    TIME 6+(2*Tadjust) :STA (indirFE),Y:STA (indirFE),Y:STOP:CHECK:EQUS"STA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :STA (indirFF),Y:STA (indirFF),Y:STOP:CHECK:EQUS"STA (indirFF),Y",dresult
    TIME 3 :STX zp:STX zp:STOP:CHECK:EQUS"STX zp",dresult
@@ -520,7 +527,7 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &DF,addrFF :STOP:CHECK:EQUS"&DF DCP (DCM) addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &DB,addrFE :STOP:CHECK:EQUS"&DB DCP (DCM) addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &DB,addrFF :STOP:CHECK:EQUS"&DB DCP (DCM) addrFF,Y",dresult
-      TIME 8 :EQUB&C3,indirFE:EQUB&C3,indirFE:STOP:CHECK:EQUS"&C3 DCP (DCM) (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&C3,indirFE+1:EQUB&C3,indirFE+1:STOP:CHECK:EQUS"&C3 DCP (DCM) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&D3,indirFE:EQUB&D3,indirFE:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&D3,indirFF:EQUB&D3,indirFF:STOP:CHECK:EQUS"&D3 DCP (DCM) (indirFF),Y",dresult
       TIME 5 :EQUB&E7,zp:EQUB&E7,zp:STOP:CHECK:EQUS"&E7 ISC (ISB,INS) zp",dresult
@@ -530,7 +537,7 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &FF,addrFF:STOP:CHECK:EQUS"&FF ISC (ISB,INS) addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &FB,addrFE:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &FB,addrFF:STOP:CHECK:EQUS"&FB ISC (ISB,INS) addrFF,Y",dresult
-      TIME 8 :EQUB&E3,indirFE:EQUB&E3,indirFE:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&E3,indirFE+1:EQUB&E3,indirFE+1:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
       TSX:STX zpx:LDX#1:TIME 4+(2*Ta2) :UNDOC3BYTE &BB,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
@@ -540,7 +547,7 @@ ORG &2000         ; code origin
       TIME 4+(2*Ta2) :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
       TIME 4+(2*Ta2) :UNDOC3BYTE &BF,addrFE:STOP:CHECK:EQUS"&BF LAX addrFE,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &BF,addrFF:STOP:CHECK:EQUS"&BF LAX addrFF,Y",dresult
-      TIME 7-(1*Ta2) :EQUB&A3,indirFE:EQUB&A3,indirFE:STOP:CHECK:EQUS"&A3 LAX (indirFE,X)",dresult
+      TIME 7+(1*Ta2) :EQUB&A3,indirFE+1:EQUB&A3,indirFE+1:STOP:CHECK:EQUS"&A3 LAX (indirFE+1,X)",dresult
       TIME 5+(1*Ta2) :EQUB&B3,indirFE:EQUB&B3,indirFE:STOP:CHECK:EQUS"&B3 LAX (indirFE),Y",dresult
       TIME 6+(2*Ta2) :EQUB&B3,indirFF:EQUB&B3,indirFF:STOP:CHECK:EQUS"&B3 LAX (indirFF),Y",dresult
       TIME 2 :EQUB&AB,imm:EQUB&AB,imm:STOP:CHECK:EQUS"&AB LXA #imm",dresult
@@ -551,7 +558,7 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &3F,addrFF:STOP:CHECK:EQUS"&3F RLA addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &3B,addrFE:STOP:CHECK:EQUS"&3B RLA addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &3B,addrFF:STOP:CHECK:EQUS"&3B RLA addrFF,Y",dresult
-      TIME 8 :EQUB&23,indirFE:EQUB&23,indirFE:STOP:CHECK:EQUS"&23 RLA (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&23,indirFE+1:EQUB&23,indirFE+1:STOP:CHECK:EQUS"&23 RLA (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&33,indirFE:EQUB&33,indirFE:STOP:CHECK:EQUS"&33 RLA (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&33,indirFF:EQUB&33,indirFF:STOP:CHECK:EQUS"&33 RLA (indirFF),Y",dresult
       TIME 5 :EQUB&67,zp:EQUB&67,zp:STOP:CHECK:EQUS"&67 RRA zp",dresult
@@ -561,22 +568,22 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &7F,addrFF:STOP:CHECK:EQUS"&7F RRA addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &7B,addrFE:STOP:CHECK:EQUS"&7B RRA addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &7B,addrFF:STOP:CHECK:EQUS"&7B RRA addrFF,Y",dresult
-      TIME 8 :EQUB&63,indirFE:EQUB&63,indirFE:STOP:CHECK:EQUS"&63 RRA (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&63,indirFE+1:EQUB&63,indirFE+1:STOP:CHECK:EQUS"&63 RRA (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&73,indirFE:EQUB&73,indirFE:STOP:CHECK:EQUS"&73 RRA (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&73,indirFF:EQUB&73,indirFF:STOP:CHECK:EQUS"&73 RRA (indirFF),Y",dresult
       TIME 3 :EQUB&87,zp:EQUB&87,zp:STOP:CHECK:EQUS"&87 SAX (AAX) zp",dresult
       TIME 4 :EQUB&97,zpx:EQUB&97,zpx:STOP:CHECK:EQUS"&97 SAX (AAX) zpx",dresult
       TIME 4+(2*Ta2) :UNDOC3BYTE &8F,addrFF:STOP:CHECK:EQUS"&8F SAX addrFF",dresult
-      TIME 6 :EQUB&83,indirFE:EQUB&83,indirFE:STOP:CHECK:EQUS"&83 SAX (AAX) (indirFE,X)",dresult
+      TIME 6+(2*Ta2) :EQUB&83,indirFE+1:EQUB&83,indirFE+1:STOP:CHECK:EQUS"&83 SAX (AAX) (indirFE+1,X)",dresult
       TIME 2 :EQUB&CB,imm:EQUB&CB,imm:STOP:CHECK:EQUS"&CB SBX #imm",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9F,addrFE:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFE,Y",dresult
       TIME 5+(1*Ta2) :UNDOC3BYTE &9F,addrFF:STOP:CHECK:EQUS"&9F SHA (AHX, AXA) addrFF,Y",dresult
       TIME 6+(2*Ta2) :EQUB&93,indirFE:EQUB&93,indirFE:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFE),Y",dresult
       TIME 6+(1*Ta2) :EQUB&93,indirFF:EQUB&93,indirFF:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFF),Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9E,addrFE:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFE,Y",dresult
-      TIME 5+(1*Ta2) :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
+      LDX #8:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
-      TIME 5+(1*Ta2) :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
+      LDY #8:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
       TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
       TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
       TIME 6+(4*Ta2) :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
@@ -584,7 +591,7 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &1F,addrFF:STOP:CHECK:EQUS"&1F SLO (ASO) addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &1B,addrFE:STOP:CHECK:EQUS"&1B SLO (ASO) addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &1B,addrFF:STOP:CHECK:EQUS"&1B SLO (ASO) addrFF,Y",dresult
-      TIME 8 :EQUB&03,indirFE:EQUB&03,indirFE:STOP:CHECK:EQUS"&03 SLO (ASO) (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&03,indirFE+1:EQUB&03,indirFE+1:STOP:CHECK:EQUS"&03 SLO (ASO) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&13,indirFE:EQUB&13,indirFE:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&13,indirFF:EQUB&13,indirFF:STOP:CHECK:EQUS"&13 SLO (ASO) (indirFF),Y",dresult
       TIME 5 :EQUB&47,zp:EQUB&47,zp:STOP:CHECK:EQUS"&47 SRE (LSE) zp",dresult
@@ -594,12 +601,12 @@ ORG &2000         ; code origin
       TIME 7+(5*Ta2) :UNDOC3BYTE &5F,addrFF:STOP:CHECK:EQUS"&5F SRE (LSE) addrFF,X",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &5B,addrFE:STOP:CHECK:EQUS"&5B SRE (LSE) addrFE,Y",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &5B,addrFF:STOP:CHECK:EQUS"&5B SRE (LSE) addrFF,Y",dresult
-      TIME 8 :EQUB&43,indirFE:EQUB&43,indirFE:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE,X)",dresult
+      TIME 8+(4*Ta2) :EQUB&43,indirFE+1:EQUB&43,indirFE+1:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
       TSX:STX zpx:TIME 5+(3*Ta2) :UNDOC3BYTE &9B,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
       ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
-      TSX:STX zpx:TIME 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y unstable",dresult
+      TSX:STX zpx:LDX #0:TXS:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
       TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
       TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
       TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
