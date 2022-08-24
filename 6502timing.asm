@@ -121,7 +121,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.16",13
+   EQUS "Version : 0.17",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -547,7 +547,7 @@ ORG &2000         ; code origin
       TIME 4+(2*Ta2) :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
       TIME 4+(2*Ta2) :UNDOC3BYTE &BF,addrFE:STOP:CHECK:EQUS"&BF LAX addrFE,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &BF,addrFF:STOP:CHECK:EQUS"&BF LAX addrFF,Y",dresult
-      TIME 7+(1*Ta2) :EQUB&A3,indirFE+1:EQUB&A3,indirFE+1:STOP:CHECK:EQUS"&A3 LAX (indirFE+1,X)",dresult
+      TIME 6+(2*Ta2)+1 :EQUB&A3,indirFE+1:LDX #1:EQUB&A3,indirFE+1:STOP:CHECK:EQUS"&A3 LAX (indirFE+1,X)",dresult
       TIME 5+(1*Ta2) :EQUB&B3,indirFE:EQUB&B3,indirFE:STOP:CHECK:EQUS"&B3 LAX (indirFE),Y",dresult
       TIME 6+(2*Ta2) :EQUB&B3,indirFF:EQUB&B3,indirFF:STOP:CHECK:EQUS"&B3 LAX (indirFF),Y",dresult
       TIME 2 :EQUB&AB,imm:EQUB&AB,imm:STOP:CHECK:EQUS"&AB LXA #imm",dresult
