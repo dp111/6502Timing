@@ -16,13 +16,12 @@ viabase  = &FE60 ; base address of 6522 via
 
 
 IF TARGET = 1 ; test page cross in 1MHz space
-   ;page boundary needs space before and afterwards for branch tests
    addrFE   = &FCFE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
    Tadjust = 1;
 ENDIF
+
 IF TARGET = 0
-   ;page boundary needs space before and afterwards for branch tests
    addrFE   = &08FE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
    Tadjust = 0;
@@ -34,6 +33,7 @@ ELSE
    Ta2 = 0
 ENDIF
 
+   ;page boundary needs space before and afterwards for branch tests
 branchaddress = &08FF
 
 ;Zero page address
@@ -56,37 +56,37 @@ dterm    = 255 ; string termination byte
 CPU cpu
 
 MACRO RESET
-	LDX #1
-	LDY #1
-	SEI
+   LDX #1
+   LDY #1
+   SEI
 ENDMACRO
 
 MACRO TIME time
-	LDA #time+timeoffset
-	STA viabase+4
-	STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
+   LDA #time+timeoffset
+   STA viabase+4
+   STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
 ENDMACRO
 
 MACRO TIMELDAZERO time
-	LDA #time+timeoffset
-	STA viabase+4
+   LDA #time+timeoffset
+   STA viabase+4
    LDA #0
-	STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
+   STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
 ENDMACRO
 
 MACRO STOP
-	LDA viabase+4
+   LDA viabase+4
 ENDMACRO
 
 MACRO CHECK
-	JSR check
+   JSR check
 ENDMACRO
 
 MACRO BLOCKCOPY address,start, end
-	LDA #(address) MOD256
-	LDX #(address) DIV256
-	LDY #end-start
-	JSR blockcopy
+   LDA #(address) MOD256
+   LDX #(address) DIV256
+   LDY #end-start
+   JSR blockcopy
 ENDMACRO
 
 MACRO UNDOC1BYTE byte
@@ -732,66 +732,66 @@ ORG &2000         ; code origin
    RTS
 
 .blockcopy
-	STA ptr2
-	STX ptr2+1
-	PLA
-	STA stringptr
-	PLA
-	STA stringptr+1
-	TYA
-	PHA
-	INY
+   STA ptr2
+   STX ptr2+1
+   PLA
+   STA stringptr
+   PLA
+   STA stringptr+1
+   TYA
+   PHA
+   INY
 
 .blockcopyloop
-	LDA (stringptr),Y
-	DEY
-	STA (ptr2),Y
-	CPY #0
-	BNE blockcopyloop
+   LDA (stringptr),Y
+   DEY
+   STA (ptr2),Y
+   CPY #0
+   BNE blockcopyloop
 
-	PLA
-	CLC
-	ADC stringptr:TAY
-	LDA #0
-	ADC stringptr+1
-	PHA
-	TYA
-	PHA
-	JMP (ptr2)
+   PLA
+   CLC
+   ADC stringptr:TAY
+   LDA #0
+   ADC stringptr+1
+   PHA
+   TYA
+   PHA
+   JMP (ptr2)
 
 .correct
 {
-	; skip string
-	PLA
-	STA stringptr
-	PLA
-	STA stringptr+1
-	LDY #1
+   ; skip string
+   PLA
+   STA stringptr
+   PLA
+   STA stringptr+1
+   LDY #1
 .PrTextLp
-	LDA (stringptr),Y
+   LDA (stringptr),Y
    INY
    CMP #dresult
    BCC PrTextLp
    DEY
 .PrTextEnd
-	CLC
-	TYA
-	ADC stringptr:TAY
-	LDA #0
-	ADC stringptr+1
-	PHA
-	TYA
-	PHA
-	RESET
-	RTS
+   CLC
+   TYA
+   ADC stringptr:TAY
+   LDA #0
+   ADC stringptr+1
+   PHA
+   TYA
+   PHA
+   RESET
+   RTS
  }
 
 .check
    CLD
-	SEC
-	SBC #timeoffset-2
-	BEQ correct
-	TAX
+   SEC
+   SBC #timeoffset-2
+   BEQ correct
+   TAX
 
 .printstring
 {
@@ -815,19 +815,19 @@ ORG &2000         ; code origin
    BEQ PrTextEnd
 
 ; print timing error, format column first
-	TYA
-	PHA
+   TYA
+   PHA
 .prcolumn
-	LDA #32
-	JSR osasci
-	INY
-	CPY #37
-	BMI prcolumn
-	TXA
-	JSR PrHex
-	PLA
-	TAY
-	LDA #13
+   LDA #32
+   JSR osasci
+   INY
+   CPY #37
+   BMI prcolumn
+   TXA
+   JSR PrHex
+   PLA
+   TAY
+   LDA #13
    JSR osasci
 
 .PrTextEnd
@@ -853,7 +853,7 @@ ORG &2000         ; code origin
 
 }
 
-	.end
+   .end
 
 
 SAVE"6502tim", start, end
