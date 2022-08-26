@@ -11,7 +11,7 @@
 
 ; Pass in cpu = 0 for 6502 : cpu =1 for 65C12 ; cpu = 2 for 65C02
 
-osasci   = &FFE3 ; os print byte
+osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
 viabase  = &FE60 ; base address of 6522 via
 
 
@@ -48,7 +48,7 @@ indirtemp2 = &78
 
 imm      = &FF ; immediate constant
 
-timeoffset = 64
+timeoffset = 2 ; sta /lda time offset
 
 dresult  = 254 ; byte to signify print timing error
 dterm    = 255 ; string termination byte
@@ -75,7 +75,7 @@ MACRO TIMELDAZERO time
 ENDMACRO
 
 MACRO STOP
-   LDA viabase+4
+   LDX viabase+4
 ENDMACRO
 
 MACRO CHECK
@@ -121,7 +121,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.17",13
+   EQUS "Version : 0.18",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -148,6 +148,7 @@ ORG &2000         ; code origin
    IF cpu
       TIME 5+(1*Tadjust) :ADC (indirFE):ADC (indirFE):STOP:CHECK:EQUS"ADC (indirFE)",dresult
    ENDIF
+
    TIME 4+(2*Tadjust) :ADC addrFF:ADC addrFF:STOP:CHECK:EQUS"ADC addrFF",dresult
    TIME 4+(2*Tadjust) :ADC addrFE,X:ADC addrFE,X:STOP:CHECK:EQUS"ADC addrFE,X",dresult
    TIME 5+(1*Tadjust)+(2*Ta2) :ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"ADC addrFF,X",dresult
@@ -203,13 +204,15 @@ ORG &2000         ; code origin
    SEC:TIME 3 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
    {BLOCKCOPY branchaddress-11, bs,be : .bs SEC:TIME 7 :BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult}
 
-   TIME 4 :LDA#1:LDA#1:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ not taken",dresult
-   TIME 5 :LDA#0:LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
+   TIME 2+1 :LDA#1:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ not taken",dresult
+   TIME 3+1 :LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
    {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
 
    IF cpu
       TIME 2 :BIT #imm:BIT #imm:STOP:CHECK:EQUS"BIT #imm",dresult
       TIME 4 :BIT zpx,X:BIT zpx,X:STOP:CHECK:EQUS"BIT zpx,X",dresult
+      TIME 4+(2*Tadjust) :BIT addrFE,X:BIT addrFE,X:STOP:CHECK:EQUS"BIT addrFE,X",dresult
+      TIME 5+(1*Tadjust)+(2*Ta2) :BIT addrFF,X:BIT addrFF,X:STOP:CHECK:EQUS"BIT addrFF,X",dresult
    ENDIF
 
    TIME 3 :BIT zp:BIT zp:STOP:CHECK:EQUS"BIT zp",dresult
@@ -342,7 +345,7 @@ ORG &2000         ; code origin
       TIME 6 :JMP (indirtemp-1,X):.jmp1 JMP(indirtemp2-1,X):.jmp2 STOP:CHECK:EQUS"JMP (&0000,X)",dresult}
    ENDIF
 
-   TIME 6 :JSR *+3:JSR *+3:STOP:TAX:PLA:PLA:PLA:PLA:TXA:CHECK:EQUS"JSR &0000",dresult
+   TIME 6 :JSR *+3:JSR *+3:STOP:PLA:PLA:PLA:PLA:TXA:CHECK:EQUS"JSR &0000",dresult
 
    TIME 2 :LDA #imm:LDA #imm:STOP:CHECK:EQUS"LDA #imm",dresult
    TIME 3 :LDA zp:LDA zp:STOP:CHECK:EQUS"LDA zp",dresult
@@ -397,14 +400,14 @@ ORG &2000         ; code origin
    TIME 5+(1*Tadjust) :ORA (indirFE),Y:ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
 
-   TIME 3 :PHA:PHA:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHA",dresult
-   TIME 3 :PHP:PHP:STOP:PLP:PLP:CHECK:EQUS"PHP",dresult
+   TIME 3 :PHA:PHA:STOP:PLA:PLA:TXA:CHECK:EQUS"PHA",dresult
+   TIME 3 :PHP:PHP:STOP:PLP:PLP:TXA:CHECK:EQUS"PHP",dresult
    PHA:PHA:TIME 4 :PLA:PLA:STOP:CHECK:EQUS"PLA",dresult
    PHP:PHP:TIME 4 :PLP:PLP:STOP:CHECK:EQUS"PLP",dresult
 
    IF cpu
-      TIME 3 :PHX:PHX:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHX",dresult
-      TIME 3 :PHY:PHY:STOP:TAY:PLA:PLA:TYA:CHECK:EQUS"PHY",dresult
+      TIME 3 :PHX:PHX:STOP:PLA:PLA:TXA:CHECK:EQUS"PHX",dresult
+      TIME 3 :PHY:PHY:STOP:PLA:PLA:TXA:CHECK:EQUS"PHY",dresult
       PHX:PHX:TIME 4 :PLX:PLX:STOP:CHECK:EQUS"PLX",dresult
       PHY:PHY:TIME 4 :PLY:PLY:STOP:CHECK:EQUS"PLY",dresult
    ENDIF
@@ -540,8 +543,8 @@ ORG &2000         ; code origin
       TIME 8+(4*Ta2) :EQUB&E3,indirFE+1:EQUB&E3,indirFE+1:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
-      TSX:STX zpx:LDX#1:TIME 4+(2*Ta2) :UNDOC3BYTE &BB,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
-      TSX:STX zpx:LDX#1:TIME 5+(3*Ta2) :UNDOC3BYTE &BB,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
+      TSX:STX zpx:LDX#1:TIME 4+(2*Ta2) :UNDOC3BYTE &BB,addrFE:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
+      TSX:STX zpx:LDX#1:TIME 5+(3*Ta2) :UNDOC3BYTE &BB,addrFF:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
       TIME 3 :EQUB&A7,zp:EQUB&A7,zp:STOP:CHECK:EQUS"&A7 LAX zp",dresult
       TIME 4 :EQUB&B7,zpx:EQUB&B7,zpx:STOP:CHECK:EQUS"&B7 LAX zpx",dresult
       TIME 4+(2*Ta2) :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
@@ -604,10 +607,10 @@ ORG &2000         ; code origin
       TIME 8+(4*Ta2) :EQUB&43,indirFE+1:EQUB&43,indirFE+1:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
-      TSX:STX zpx:TIME 5+(3*Ta2) :UNDOC3BYTE &9B,addrFE:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
+      TSX:STX zpx:TIME 5+(3*Ta2) :UNDOC3BYTE &9B,addrFE:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
       ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
-      TSX:STX zpx:LDX #0:TXS:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:LDX zpx:TXS:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
-      TIME 2 :EQUB&8B,imm:EQUB&8B,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
+      TSX:STX zpx:LDX #0:TXS:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
+      TIME 2 :EQUB&EB,imm:EQUB&EB,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
       TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
       TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
       TIME 2 :EQUB&5A:EQUB&5A:STOP:CHECK:EQUS"&5A NOP",dresult
@@ -766,13 +769,13 @@ ORG &2000         ; code origin
    STA stringptr
    PLA
    STA stringptr+1
-   LDY #1
+   LDY #0
 .PrTextLp
-   LDA (stringptr),Y
    INY
+   LDA (stringptr),Y
    CMP #dresult
    BCC PrTextLp
-   DEY
+
 .PrTextEnd
    CLC
    TYA
@@ -788,10 +791,7 @@ ORG &2000         ; code origin
 
 .check
    CLD
-   SEC
-   SBC #timeoffset-2
    BEQ correct
-   TAX
 
 .printstring
 {
@@ -823,6 +823,7 @@ ORG &2000         ; code origin
    INY
    CPY #37
    BMI prcolumn
+
    TXA
    JSR PrHex
    PLA
