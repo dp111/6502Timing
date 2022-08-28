@@ -133,7 +133,7 @@ ORG &2000         ; code origin
    ENDIF
 
 
-   EQUS "Version : 0.19",13
+   EQUS "Version : 0.20",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -437,7 +437,9 @@ ORG &2000         ; code origin
       TIME 3 :PHY:PHY:STOP:PLA:PLA:TXA:CHECK:EQUS"PHY",dresult
       PHX:PHX:TIME 4 :PLX:PLX:STOP:CHECK:EQUS"PLX",dresult
       PHY:PHY:TIME 4 :PLY:PLY:STOP:CHECK:EQUS"PLY",dresult
+   ENDIF
 
+   IF cpu = 2 ; 65c02 instructions
       TIME 5 : UNDOC2BYTE &07,zp:STOP:CHECK:EQUS"RMB0",dresult
       TIME 5 : UNDOC2BYTE &17,zp:STOP:CHECK:EQUS"RMB1",dresult
       TIME 5 : UNDOC2BYTE &27,zp:STOP:CHECK:EQUS"RMB2",dresult
@@ -773,12 +775,9 @@ ORG &2000         ; code origin
       TIME 4 :UNDOC2BYTE &54,zpx:STOP:CHECK:EQUS"&54 NOP zpx",dresult
       TIME 4 :UNDOC2BYTE &D4,zpx:STOP:CHECK:EQUS"&D4 NOP zpx",dresult
       TIME 4 :UNDOC2BYTE &F4,zpx:STOP:CHECK:EQUS"&F4 NOP zpx",dresult
-      TIME 8 :UNDOC3BYTE &5C,addrFE:STOP:CHECK:EQUS"&5C NOP addrFE,X",dresult
-      TIME 8 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF,X",dresult
-      TIME 4+(2*Tadjust) :UNDOC3BYTE &DC,addrFE:STOP:CHECK:EQUS"&DC NOP addrFE,X",dresult
-      TIME 4+(2*Tadjust) :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF,X",dresult
-      TIME 4+(2*Tadjust) :UNDOC3BYTE &FC,addrFE:STOP:CHECK:EQUS"&FC NOP addrFE,X",dresult
-      TIME 4+(2*Tadjust) :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF,X",dresult
+      TIME 8 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF",dresult
+      TIME 4+(2*Tadjust) :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF",dresult
+      TIME 4+(2*Tadjust) :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF",dresult
    ENDIF
 
    JSR printstring:EQUS"Done!",13,dterm
