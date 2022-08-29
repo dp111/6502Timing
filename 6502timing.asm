@@ -6,28 +6,133 @@
 ; it assumes that there is some forum of character output routine @ &FFE3
 ; it requires a 6522 via clocked at 1MHz assumed to be @ &FE60
 ; it requires some ram in Zero page and some RAM across a page boundary &0900 used here
-; the code is assembled @ &2000
+; the code is assembled @ &2000 for acorn targets
 
 
 ; Pass in cpu = 0 for 6502 : cpu =1 for 65C12 ; cpu = 2 for 65C02
+; target = 0 for no 1MHz stretching target=1 for 1MHZ clock stretching
+; target = 2 for C64
 
-osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
-viabase  = &FE60 ; base address of 6522 via
+;Zero page address
+zpx         = &70
+zp          = &71
+indirFE     = &72 ; indirect address of page boundary -2
+indirFF     = &74 ; indirect address of page boundary -1
+stringptr   = &76
+ptr2        = &78
+indirtemp   = &76
+indirtemp2  = &78
 
-IF TARGET = 1 ; test page cross in 1MHz space
-   addrFE   = &FCFE ; address -2 of page boundary
-   addrFF   = addrFE+1 ; address -1 of page boundary
-   Tadjust = 1;
-ENDIF
-
-IF TARGET = 0
+IF target = 0 ; normal memory space
+   ORG &2000         ; code origin
+.start
+   branchaddress = &8FF ;page boundary needs space before and afterwards for branch tests
    addrFE   = &08FE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
-   Tadjust = 0;
+   Tadjust  = 0; clock stretch cycle adjust
+   BCadjust = 0; number of extra bytes in the time macro
+   osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
+   timerbase  = &FE60 ; base address of 6522 via
+   Tscale   = 1 ; Timing scaling for via clock
+      ;setup via
+   LDA #&7F : STA timerbase+&E ; turn off interrupts
+   LDA #&00 : STA timerbase+&B ; setup timer 1
 ENDIF
 
-IF ((TARGET = 1) AND (cpu = 0))
-   Ta2 = 1
+IF target = 1 ; test page cross in 1MHz space
+   ORG &2000         ; code origin
+.start
+   branchaddress = &8FF ;page boundary needs space before and afterwards for branch tests
+   addrFE   = &FCFE ; address -2 of page boundary
+   addrFF   = addrFE+1 ; address -1 of page boundary
+   Tadjust  = 1; clock stretch cycle adjust
+   BCadjust = 0; number of extra bytes in the time macro
+   osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
+   timerbase  = &FE60 ; base address of 6522 via
+   Tscale   = 1  ; Timing scaling for via clock
+      ;setup via
+   LDA #&7F : STA timerbase+&E ; turn off interrupts
+   LDA #&00 : STA timerbase+&B ; setup timer 1
+ENDIF
+
+IF target = 2 ; C64
+   ORG &7FF         ; code origin
+.start
+   branchaddress = &8FFF ;page boundary needs space before and afterwards for branch tests
+   addrFE   = &8CFE ; address -2 of page boundary
+   addrFF   = addrFE+1 ; address -1 of page boundary
+   Tadjust  = 0; clock stretch cycle adjust
+   BCadjust = 0; number of extra bytes in the time macro
+   Tscale   = 2  ; Timing scaling for via clock
+   c64osasci = &FFD2 ; os print byte ( needs to preserve X and Y)
+   timerbase  = &DD00 ; base address of timer
+   EQUB $01,$08,$0E,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
+   ORG &0810
+   JMP codestart
+
+.osasci
+   cmp #64
+   bcc  printcharok
+   eor #32
+.printcharok
+   jmp c64osasci
+
+.waitforraster
+   STA timerbase+4
+   STA timerbase+5
+.waitforrasterloop
+   LDA $D012               ; hardcoded raster counter . we need to sync to the beginning of the frame
+   BNE waitforrasterloop
+   LDA #&11
+   RTS
+
+.codestart
+   LDA #$E  ; Select other font
+   JSR c64osasci
+   SEI
+   LDA #&7F : STA timerbase+&D ; turn off interrupts
+
+ENDIF
+
+; timer macros NB the length of TIME is important
+
+timeoffset = 2 ; sta /lda time offset
+
+IF target = 2
+
+   MACRO TIME time
+      LDA #(time*Tscale+timeoffset)-1 ; -1 to take into account the offset of the timer starting
+      JSR waitforraster
+      STA timerbase+&E
+   ENDMACRO
+
+   MACRO TIMELDAZERO time
+      LDA #(time*Tscale+timeoffset)+1 ; +1 to take into account the LDA at the end
+      JSR waitforraster
+      STA timerbase+&E
+      LDA #0
+   ENDMACRO
+
+ELSE
+   MACRO TIME time
+      LDA #(time+timeoffset)*Tscale
+      STA timerbase+4
+      STA timerbase+5     ; doesn't matter what the high byte is to trigger the timer
+   ENDMACRO
+
+   MACRO TIMELDAZERO time
+      LDA #(time+timeoffset)*Tscale
+      STA timerbase+4
+      LDA #0
+      STA timerbase+5     ; doesn't matter what the high byte is to trigger the timer
+   ENDMACRO
+
+ENDIF
+
+; end of target definitions
+
+IF ((target = 1) AND (cpu = 0))
+   Ta2 = 1 ; BBC B with 1MHz clock stretch
 ELSE
    Ta2 = 0
 ENDIF
@@ -40,22 +145,7 @@ ELSE
    cpucmos = 0
 ENDIF
 
-   ;page boundary needs space before and afterwards for branch tests
-branchaddress = &08FF
-
-;Zero page address
-zpx      = &70
-zp       = &71
-indirFE  = &72 ; indirect address of page boundary -2
-indirFF  = &74 ; indirect address of page boundary -1
-stringptr = &76
-ptr2     = &78
-indirtemp = &76
-indirtemp2 = &78
-
 imm      = &FF ; immediate constant
-
-timeoffset = 2 ; sta /lda time offset
 
 dresult  = 254 ; byte to signify print timing error
 dterm    = 255 ; string termination byte
@@ -66,21 +156,8 @@ MACRO RESET
    SEI
 ENDMACRO
 
-MACRO TIME time
-   LDA #time+timeoffset
-   STA viabase+4
-   STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
-ENDMACRO
-
-MACRO TIMELDAZERO time
-   LDA #time+timeoffset
-   STA viabase+4
-   LDA #0
-   STA viabase+5     ; doesn't matter what the high byte is to trigger the timer
-ENDMACRO
-
 MACRO STOP
-   LDX viabase+4
+   LDX timerbase+4
 ENDMACRO
 
 MACRO CHECK
@@ -88,8 +165,8 @@ MACRO CHECK
 ENDMACRO
 
 MACRO BLOCKCOPY address,start, end
-   LDA #(address) MOD256
-   LDX #(address) DIV256
+   LDA #(address-BCadjust) MOD256
+   LDX #(address-BCadjust) DIV256
    LDY #end-start
    JSR blockcopy
 ENDMACRO
@@ -109,8 +186,6 @@ MACRO UNDOC3BYTE byte,address
    EQUB byte,address MOD256,address DIV256
 ENDMACRO
 
-ORG &2000         ; code origin
-.start
    JSR printstring
 
    IF cpu = 0
@@ -125,15 +200,13 @@ ORG &2000         ; code origin
       EQUS "65C02 instruction timing checker"
    ENDIF
 
-   IF TARGET = 0
-      EQUB 13,13
-   ENDIF
-   IF TARGET = 1
-      EQUB " (1MHz)",13,13
+   IF target = 1
+      EQUB " (1MHz)"
    ENDIF
 
+   EQUB 13,13
 
-   EQUS "Version : 0.20",13
+   EQUS "Version : 0.21",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -148,9 +221,6 @@ ORG &2000         ; code origin
    LDA #addrFE  DIV 256:STA indirFE+1
    LDA #addrFF  MOD 256:STA indirFF
    LDA #addrFF  DIV 256:STA indirFF+1
-   ;setup via
-   LDA #&7F : STA viabase+&E ; turn off interrupts
-   LDA #&00 : STA viabase+&B ; setup timer 1
 
    RESET
 
@@ -439,7 +509,8 @@ ORG &2000         ; code origin
       PHY:PHY:TIME 4 :PLY:PLY:STOP:CHECK:EQUS"PLY",dresult
    ENDIF
 
-   IF cpu = 2 ; 65c02 instructions
+   IF cpu = 2
+      ; 65C02 instructions
       TIME 5 : UNDOC2BYTE &07,zp:STOP:CHECK:EQUS"RMB0",dresult
       TIME 5 : UNDOC2BYTE &17,zp:STOP:CHECK:EQUS"RMB1",dresult
       TIME 5 : UNDOC2BYTE &27,zp:STOP:CHECK:EQUS"RMB2",dresult
@@ -531,7 +602,7 @@ ORG &2000         ; code origin
    TIME 4 :STY zpx,X:STY zpx,X:STOP:CHECK:EQUS"STY zpx,X",dresult
    TIME 4+(2*Tadjust) :STY addrFE:STY addrFE :STOP:CHECK:EQUS"STY addrFE",dresult
 
-   IF (cpucmos AND (TARGET = 1))
+   IF (cpucmos AND (target = 1))
       TIME 5+(3*Tadjust) :EQUB&03:STA addrFE,X:EQUB&03:STA addrFE,X:STOP:CHECK:EQUS"NOP1: STA addrFE,X",dresult
       TIME 4+(0*Tadjust) :LDA &FE34 :LDA &FE34 :STOP:CHECK:EQUS"LDA &FE34 (no stretch)",dresult
    ENDIF
@@ -875,6 +946,14 @@ ORG &2000         ; code origin
    BMI prcolumn
 
    TXA
+IF (Tscale !=0)
+   CLC
+   BPL shiftscale
+   SEC
+.shiftscale
+   ROR A
+ENDIF
+
    JSR PrHex
    PLA
    TAY
@@ -906,5 +985,8 @@ ORG &2000         ; code origin
 
    .end
 
-
-SAVE"6502tim", start, end
+IF target = 2
+   SAVE "6502tim.prg",start,end
+ELSE
+   SAVE"6502tim", start, end
+ENDIF
