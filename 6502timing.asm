@@ -22,6 +22,7 @@ stringptr   = &76
 ptr2        = &78
 indirtemp   = &76
 indirtemp2  = &78
+passfailzp  = &7A
 
 IF target = 0 ; normal memory space
    ORG &2000         ; code origin
@@ -33,6 +34,7 @@ IF target = 0 ; normal memory space
    BCadjust = 0; number of extra bytes in the time macro
    osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
    timerbase  = &FE60 ; base address of 6522 via
+   passfailreg = &FCD0 ; address that is written to to signify pass or number of failures
    Tscale   = 1 ; Timing scaling for via clock
       ;setup via
    LDA #&7F : STA timerbase+&E ; turn off interrupts
@@ -49,6 +51,7 @@ IF target = 1 ; test page cross in 1MHz space
    BCadjust = 0; number of extra bytes in the time macro
    osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
    timerbase  = &FE60 ; base address of 6522 via
+   passfailreg = &FCD0 ; address that is written to to signify pass or number of failures
    Tscale   = 1  ; Timing scaling for via clock
       ;setup via
    LDA #&7F : STA timerbase+&E ; turn off interrupts
@@ -66,6 +69,7 @@ IF target = 2 ; C64
    Tscale   = 2  ; Timing scaling for via clock
    c64osasci = &FFD2 ; os print byte ( needs to preserve X and Y)
    timerbase  = &DD00 ; base address of timer
+   passfailreg = $DFFF ; address that is written to to signify pass or number of failures
    EQUB $01,$08,$0E,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
    ORG &0810
    JMP codestart
@@ -206,7 +210,7 @@ ENDMACRO
 
    EQUB 13,13
 
-   EQUS "Version : 0.21",13
+   EQUS "Version : 0.22",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -214,13 +218,15 @@ ENDMACRO
    EQUS " FF means 1 Clock Cycle too long",13
    EQUS "    etc",13,13,dterm
    JSR printstring:
-   EQUS "Checking documented instructions...",13,14,dterm
+   EQUS "Checking documented instructions...",13,dterm
 
    ; setup indirect pointers
    LDA #addrFE  MOD 256:STA indirFE
    LDA #addrFE  DIV 256:STA indirFE+1
    LDA #addrFF  MOD 256:STA indirFF
    LDA #addrFF  DIV 256:STA indirFF+1
+
+   LDA #0 : sta passfailzp
 
    RESET
 
@@ -851,7 +857,12 @@ ENDMACRO
       TIME 4+(2*Tadjust) :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF",dresult
    ENDIF
 
-   JSR printstring:EQUS"Done!",13,dterm
+   JSR printstring:EQUS"Done!",13,13,"Number of failures : 0x",dterm
+   LDA passfailzp : JSR PrHex
+   LDA #13: JSR osasci
+
+   LDA passfailzp
+   STA passfailreg
 
    RTS
 
@@ -885,7 +896,7 @@ ENDMACRO
 
 .check
    CLD
-   BNE printstring
+   BNE testfailed
 
 .correct
 {
@@ -913,6 +924,9 @@ ENDMACRO
    RESET
    RTS
  }
+
+.testfailed
+   INC passfailzp
 
 .printstring
 {
@@ -971,6 +985,7 @@ ENDIF
    PHA
    RESET
    RTS
+}
 
 .PrHex
   PHA:LSR A:LSR A:LSR A:LSR A
@@ -980,8 +995,6 @@ ENDIF
   ADC #6
 .PrDigit
   ADC #'0':JMP osasci
-
-}
 
    .end
 
