@@ -31,7 +31,7 @@ These versions are the same as the acorn version except they aren't built within
 | &2010 | Display character in A , must preserve X and Y |
 | &2020 | Initialise timer and screen etc |
 | &2030 | Start timer with the value in A ( depend on the system you may need to add or subtract a constant to take into account timer zero errors). Must preserve X and Y |
-| &2040 | Read timer in X |
+| &2040 | Read timer into X |
 | &2050 | end of tests A contains the number of failed tests. |
 
 # C64 version ( 6502tim.prg)
