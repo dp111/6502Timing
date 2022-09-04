@@ -18,8 +18,10 @@ This creates SSDs that can be shift breaked to start the test.
 |6502timing1M.ssd  |BBC 6502 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
 |65C12timing.ssd   |BBC Master 65C12 instruction timing test suite|
 |65C12timing1M.ssd |BBC Master 65C12 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
+|65C02timing.ssd   |BBC upgraded to 65C02 instruction timing test suite|
+|65C02timing1M.ssd |BBC upgraded to 65C02 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
 
-#Vectors Build ( .6502)
+# Vectors Build ( .6502)
 
 These versions are the same as the acorn version except they aren't built within an SSD file. The vector versions have a fixed set of vectors that external functions are vectored through. This enables easy patching of the vectors to add custom timer functions for instance. If your code functions are small ( <17bytes) then you can place your code directly at the vector otherwise you will need to JMP to you function.
 
@@ -32,7 +34,7 @@ These versions are the same as the acorn version except they aren't built within
 | &2040 | Read timer in X |
 | &2050 | end of tests A contains the number of failed tests. |
 
-#C64 version ( 6502tim.prg)
+# C64 version ( 6502tim.prg)
 
 This is a special build for C64 machines.
 
