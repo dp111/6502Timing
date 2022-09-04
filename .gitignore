@@ -1,3 +1,11 @@
 
 6502timingDict.asm
 .test
+6502timing1MT.ssd
+MasterSTAzpX1MHz2.png
+MasterSTAzp,X1MHz.png
+buildtest.sh
+65C12timingT.ssd
+6502timingtest.asm
+6502timingT.ssd
+6502timing - Vectors.asm

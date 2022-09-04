@@ -13,6 +13,15 @@
 ; target = 0 for no 1MHz stretching target=1 for 1MHZ clock stretching
 ; target = 2 for C64
 
+; vectors
+; $2000 entry
+; $2010 printchar entry A char to print . Must preserve X Y
+; $2020 setup ( e.g. timer )
+; $2030 timer start ; entry A time to preset the timer ( may need to add a constant)
+; $2040 timer stop ; return timer value in X
+; $2050 End of test ; entry A number of failures
+; $2060
+
 ;Zero page address
 zpx         = &70
 zp          = &71
@@ -25,54 +34,56 @@ indirtemp2  = &78
 passfailzp  = &7A
 
 IF target = 0 ; normal memory space
-   ORG &2000         ; code origin
-.start
    branchaddress = &8FF ;page boundary needs space before and afterwards for branch tests
    addrFE   = &08FE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
    Tadjust  = 0; clock stretch cycle adjust
    BCadjust = 0; number of extra bytes in the time macro
-   osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
    timerbase  = &FE60 ; base address of 6522 via
    passfailreg = &FCD0 ; address that is written to to signify pass or number of failures
-   Tscale   = 1 ; Timing scaling for via clock
       ;setup via
-   LDA #&7F : STA timerbase+&E ; turn off interrupts
-   LDA #&00 : STA timerbase+&B ; setup timer 1
 ENDIF
 
 IF target = 1 ; test page cross in 1MHz space
-   ORG &2000         ; code origin
-.start
+
    branchaddress = &8FF ;page boundary needs space before and afterwards for branch tests
    addrFE   = &FCFE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
    Tadjust  = 1; clock stretch cycle adjust
    BCadjust = 0; number of extra bytes in the time macro
-   osasci   = &FFE3 ; os print byte ( needs to preserve X and Y)
    timerbase  = &FE60 ; base address of 6522 via
    passfailreg = &FCD0 ; address that is written to to signify pass or number of failures
-   Tscale   = 1  ; Timing scaling for via clock
       ;setup via
-   LDA #&7F : STA timerbase+&E ; turn off interrupts
-   LDA #&00 : STA timerbase+&B ; setup timer 1
 ENDIF
 
 IF target = 2 ; C64
-   ORG &7FF         ; code origin
-.start
+
    branchaddress = &8FFF ;page boundary needs space before and afterwards for branch tests
    addrFE   = &8CFE ; address -2 of page boundary
    addrFF   = addrFE+1 ; address -1 of page boundary
    Tadjust  = 0; clock stretch cycle adjust
    BCadjust = 0; number of extra bytes in the time macro
-   Tscale   = 2  ; Timing scaling for via clock
    c64osasci = &FFD2 ; os print byte ( needs to preserve X and Y)
    timerbase  = &DD00 ; base address of timer
    passfailreg = $DFFF ; address that is written to to signify pass or number of failures
-   EQUB $01,$08,$0E,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00,$00,$00
-   ORG &0810
-   JMP codestart
+
+   prgorg = &2000-15
+   ORG &7FF; code origin
+.start
+   EQUB LO(prgstart),HI(prgstart)
+   .prgstart
+   EQUB LO(prgend),HI(prgend) ; pointer to next line
+   EQUB LO(0010),HI(0010) ; line number
+   EQUB &9E," 2064",0 ; "SYS 8192",0
+
+
+   .prgend
+   EQUB 0,0 ; end of program
+   EQUB 0,0
+   ;ORG &0810
+ ;  ORG &2000
+
+   JMP starttest
 
 .osasci
    cmp #64
@@ -81,72 +92,80 @@ IF target = 2 ; C64
 .printcharok
    jmp c64osasci
 
-.waitforraster
+.setup
+   LDA #&7F : STA timerbase+&D ; turn off interrupts
+   LDA #$E  ; Select other font
+   JSR c64osasci
+
+   RTS
+
+.starttimer
+   SEC
+   SBC #3
    STA timerbase+4
    STA timerbase+5
 .waitforrasterloop
    LDA $D012               ; hardcoded raster counter . we need to sync to the beginning of the frame
+   AND #&e4
    BNE waitforrasterloop
    LDA #&11
+   STA timerbase+&E
    RTS
 
-.codestart
-   LDA #$E  ; Select other font
-   JSR c64osasci
-   SEI
-   LDA #&7F : STA timerbase+&D ; turn off interrupts
+.stoptimer              ; stop timer vector
+   LDX timerbase+4
+   RTS
 
-ENDIF
-
-; timer macros NB the length of TIME is important
-
-timeoffset = 2 ; sta /lda time offset
-
-IF target = 2
-
-   MACRO TIME time
-      LDA #(time*Tscale+timeoffset)-1 ; -1 to take into account the offset of the timer starting
-      JSR waitforraster
-      STA timerbase+&E
-   ENDMACRO
-
-   MACRO TIMELDAZERO time
-      LDA #(time*Tscale+timeoffset)+1 ; +1 to take into account the LDA at the end
-      JSR waitforraster
-      STA timerbase+&E
-      LDA #0
-   ENDMACRO
-
-ELSE
-   MACRO TIME time
-      LDA #(time+timeoffset)*Tscale
-      STA timerbase+4
-      STA timerbase+5     ; doesn't matter what the high byte is to trigger the timer
-   ENDMACRO
-
-   MACRO TIMELDAZERO time
-      LDA #(time+timeoffset)*Tscale
-      STA timerbase+4
-      LDA #0
-      STA timerbase+5     ; doesn't matter what the high byte is to trigger the timer
-   ENDMACRO
-
+.endoftests             ; end tests vector
+   RTS
 ENDIF
 
 ; end of target definitions
+
+IF ((target = 0) OR (target =1))
+; setup vectors
+   origin = &2000
+   ORG origin         ; code origin
+.start
+   JMP starttest
+
+   ORG origin+&10
+.osasci                 ; put char vector
+   JMP $FFE3            ; os print byte ( needs to preserve X and Y)
+
+   ORG origin+&20
+.setup                   ; setup timer vector
+   LDA #&7F : STA timerbase+&E ; turn off interrupts
+   LDA #&00 : STA timerbase+&B ; setup timer 1
+   RTS
+
+   ORG origin+&30
+.starttimer             ; start timer vector
+   LSR A                ; Beeb timer is 1MHz
+   STA timerbase+4
+   STA timerbase+5     ; doesn't matter what the high byte is to trigger the timer
+   RTS
+
+   ORG origin+&40
+.stoptimer              ; stop timer vector
+   LDA timerbase+4
+   ASL A                ; compensate for beeb timer being 1MHz
+   TAX
+   RTS
+
+   ORG origin+&50
+.endoftests             ; end tests vector
+   STA passfailreg
+   RTS
+
+   ORG origin+&60
+
+ENDIF
 
 IF ((target = 1) AND (cpu = 0))
    Ta2 = 1 ; BBC B with 1MHz clock stretch
 ELSE
    Ta2 = 0
-ENDIF
-
-IF cpu
-   CPU 1
-   cpucmos = 1
-ELSE
-   CPU 0
-   cpucmos = 0
 ENDIF
 
 imm      = &FF ; immediate constant
@@ -160,8 +179,17 @@ MACRO RESET
    SEI
 ENDMACRO
 
+; timer macros NB the length of TIME is important
+
+timeoffset = 8 ; sta /lda time offset
+
+MACRO TIME time
+   LDA #(time+timeoffset)*2
+   JSR starttimer
+ENDMACRO
+
 MACRO STOP
-   LDX timerbase+4
+   JSR stoptimer ; LDX timerbase+4
 ENDMACRO
 
 MACRO CHECK
@@ -169,8 +197,8 @@ MACRO CHECK
 ENDMACRO
 
 MACRO BLOCKCOPY address,start, end
-   LDA #(address-BCadjust) MOD256
-   LDX #(address-BCadjust) DIV256
+   LDA #LO(address-BCadjust)
+   LDX #HI(address-BCadjust)
    LDY #end-start
    JSR blockcopy
 ENDMACRO
@@ -186,22 +214,30 @@ MACRO UNDOC2BYTE byte,address
 ENDMACRO
 
 MACRO UNDOC3BYTE byte,address
-   EQUB byte,address MOD256,address DIV256
-   EQUB byte,address MOD256,address DIV256
+   EQUB byte,LO(address),HI(address)
+   EQUB byte,LO(address),HI(address)
 ENDMACRO
 
+.starttest
+   JSR setup
    JSR printstring
 
    IF cpu = 0
       EQUS "6502 instruction timing checker"
+      cpucmos = 0
+      CPU 0
    ENDIF
 
    IF cpu = 1
       EQUS "65C12 instruction timing checker"
+      cpucmos = 1
+      CPU 1
    ENDIF
 
    IF cpu = 2
       EQUS "65C02 instruction timing checker"
+      cpucmos = 1
+      CPU 1
    ENDIF
 
    IF target = 1
@@ -210,15 +246,18 @@ ENDMACRO
 
    EQUB 13,13
 
-   EQUS "Version : 0.22",13
+   EQUS "Version : 0.23",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
    EQUS " 01 means 1 Clock Cycle too quick",13
    EQUS " FF means 1 Clock Cycle too long",13
    EQUS "    etc",13,13,dterm
+
+   TIME 0 :STOP:CHECK:EQUS"Warning Timer Zero Error",dresult
+
    JSR printstring:
-   EQUS "Checking documented instructions...",13,dterm
+   EQUS "Checking documented instructions...",13,14,dterm
 
    ; setup indirect pointers
    LDA #addrFE  MOD 256:STA indirFE
@@ -246,20 +285,20 @@ ENDMACRO
    TIME 5+(1*Tadjust) :ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"ADC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y",dresult
 
-   SED:TIME 2 +cpucmos:ADC #imm :ADC #imm:STOP:CHECK:EQUS"SED ADC #imm",dresult
-   SED:TIME 3 +cpucmos:ADC zp:ADC zp:STOP:CHECK:EQUS"SED ADC zp",dresult
-   SED:TIME 4 +cpucmos:ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"SED ADC zpx,X",dresult
+   TIME 2+1 +cpucmos:SED:ADC #imm :ADC #imm:STOP:CHECK:EQUS"SED ADC #imm",dresult
+   TIME 3+1 +cpucmos:SED:ADC zp:ADC zp:STOP:CHECK:EQUS"SED ADC zp",dresult
+   TIME 4+1 +cpucmos:SED:ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"SED ADC zpx,X",dresult
    IF cpucmos
-      SED:TIME 5+(1*Tadjust) +cpucmos:ADC (indirFE):ADC (indirFE):STOP:CHECK:EQUS"SED ADC (indirFE)",dresult
+      TIME 5+1+(1*Tadjust) +cpucmos:SED:ADC (indirFE):ADC (indirFE):STOP:CHECK:EQUS"SED ADC (indirFE)",dresult
    ENDIF
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:ADC addrFF:ADC addrFF:STOP:CHECK:EQUS"SED ADC addrFF",dresult
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:ADC addrFE,X:ADC addrFE,X:STOP:CHECK:EQUS"SED ADC addrFE,X",dresult
-   SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpucmos:ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"SED ADC addrFF,X",dresult
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:ADC addrFE,Y:ADC addrFE,Y:STOP:CHECK:EQUS"SED ADC addrFE,Y",dresult
-   SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpucmos:ADC addrFF,Y:ADC addrFF,Y:STOP:CHECK:EQUS"SED ADC addrFF,Y",dresult
-   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpucmos:ADC (indirFE+1,X):ADC (indirFE+1,X):STOP:CHECK:EQUS"SED ADC (indirFE+1,X)",dresult
-   SED:TIME 5+(1*Tadjust) +cpucmos:ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"SED ADC (indirFE),Y",dresult
-   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpucmos:ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC addrFF:ADC addrFF:STOP:CHECK:EQUS"SED ADC addrFF",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC addrFE,X:ADC addrFE,X:STOP:CHECK:EQUS"SED ADC addrFE,X",dresult
+   TIME 5+1+(1*Tadjust)+(2*Ta2) +cpucmos:SED:ADC addrFF,X:ADC addrFF,X:STOP:CHECK:EQUS"SED ADC addrFF,X",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC addrFE,Y:ADC addrFE,Y:STOP:CHECK:EQUS"SED ADC addrFE,Y",dresult
+   TIME 5+1+(1*Tadjust)+(2*Ta2) +cpucmos:SED:ADC addrFF,Y:ADC addrFF,Y:STOP:CHECK:EQUS"SED ADC addrFF,Y",dresult
+   TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC (indirFE+1,X):ADC (indirFE+1,X):STOP:CHECK:EQUS"SED ADC (indirFE+1,X)",dresult
+   TIME 5+1+(1*Tadjust) +cpucmos:SED:ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"SED ADC (indirFE),Y",dresult
+   TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y",dresult
 
 
    TIME 2 :AND #imm:AND #imm:STOP:CHECK:EQUS"AND #imm",dresult
@@ -284,17 +323,17 @@ ENDMACRO
    TIME 7+(4*Tadjust)+(1*Ta2)-cpucmos :ASL addrFE,X:ASL addrFE,X:STOP:CHECK:EQUS"ASL addrFE,X",dresult
    TIME 7+(3*Tadjust)+(2*Ta2) :ASL addrFF,X:ASL addrFF,X:STOP:CHECK:EQUS"ASL addrFF,X",dresult
 
-   SEC:TIME 2 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
-   CLC:TIME 3 :BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC taken",dresult
-   {BLOCKCOPY branchaddress-11, bs,be : .bs CLC:TIME 7 :BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult}
+   TIME 2+1 :SEC:BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC not taken",dresult
+   TIME 3+1 :CLC:BCC*+2:BCC*+2:STOP:CHECK:EQUS"BCC taken",dresult
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 7+1 :CLC:BCC*+4:.b BCC*+6:BCC *+2:BCC b:STOP:RTS:.be : CHECK: EQUS"BCC page cross",dresult}
 
-   CLC:TIME 2 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS not taken",dresult
-   SEC:TIME 3 :BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
-   {BLOCKCOPY branchaddress-11, bs,be : .bs SEC:TIME 7 :BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult}
+   TIME 2+1 :CLC:BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS not taken",dresult
+   TIME 3+1 :SEC:BCS*+2:BCS*+2:STOP:CHECK:EQUS"BCS taken",dresult
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 7+1 :SEC:BCS*+4:.b BCS*+6:BCS *+2:BCS b:STOP:RTS:.be : CHECK: EQUS"BCS page cross",dresult}
 
    TIME 2+1 :LDA#1:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ not taken",dresult
    TIME 3+1 :LDA#0:BEQ*+2:BEQ*+2:STOP:CHECK:EQUS"BEQ taken",dresult
-   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
+   {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 7+1 :LDA#0:BEQ*+4:.b BEQ*+6:BEQ *+2:BEQ b:STOP:RTS:.be : CHECK: EQUS"BEQ page cross",dresult}
 
    IF cpucmos
       TIME 2 :BIT #imm:BIT #imm:STOP:CHECK:EQUS"BIT #imm",dresult
@@ -363,13 +402,14 @@ ENDMACRO
       {BLOCKCOPY branchaddress-10, bs,be : .bs TIME 7 :BRA*+4:.b BRA*+6:BRA *+2:BRA b:STOP:RTS:.be : CHECK: EQUS"BRA page cross",dresult}
    ENDIF
 
-   BIT indirFF:TIME 2 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
-   CLV:TIME 3 :BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
-   {BLOCKCOPY branchaddress-11, bs,be : .bs CLV:TIME 7 :BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult}
+   ; EQUS &2C,LO(indirFF),HI(indirFF) is BIT 00zp which is a 4 cycle instruction NB bit zp is 3 cycles
+   TIME 2+2 :EQUS &2C,LO(indirFF),HI(indirFF):BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC not taken",dresult
+   TIME 3+1 :CLV:BVC*+2:BVC*+2:STOP:CHECK:EQUS"BVC taken",dresult
+   {BLOCKCOPY branchaddress-11, bs,be : .bs TIME 7+1 :CLV:BVC*+4:.b BVC*+6:BVC *+2:BVC b:STOP:RTS:.be : CHECK: EQUS"BVC page cross",dresult}
 
-   CLV:TIME 2 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS not taken",dresult
-   BIT indirFF:TIME 3 :BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS taken",dresult
-   {BLOCKCOPY branchaddress-12, bs,be : .bs BIT indirFF: TIME 7 :BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult}
+   TIME 2+1 :CLV:BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS not taken",dresult
+   TIME 3+2 :EQUS &2C,LO(indirFF),HI(indirFF):BVS*+2:BVS*+2:STOP:CHECK:EQUS"BVS taken",dresult
+   {BLOCKCOPY branchaddress-13, bs,be : .bs TIME 7+2:EQUS &2C,LO(indirFF),HI(indirFF):BVS*+4:.b BVS*+6:BVS *+2:BVS b:STOP:RTS:.be : CHECK: EQUS"BVS page cross",dresult}
    RESET
    TIME 2 :CLC:CLC:STOP:CHECK:EQUS"CLC",dresult
    TIME 2 :CLD:CLD:STOP:CHECK:EQUS"CLD",dresult
@@ -570,20 +610,20 @@ ENDMACRO
    TIME 5+(1*Tadjust) :SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SBC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y",dresult
 
-   SED:TIME 2 +cpucmos:SBC #imm:SBC #imm:STOP:CHECK:EQUS"SED SBC #imm",dresult
-   SED:TIME 3 +cpucmos:SBC zp:SBC zp:STOP:CHECK:EQUS"SED SBC zp",dresult
-   SED:TIME 4 +cpucmos:SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SED SBC zpx,X",dresult
+   TIME 2+1 +cpucmos:SED:SBC #imm:SBC #imm:STOP:CHECK:EQUS"SED SBC #imm",dresult
+   TIME 3+1 +cpucmos:SED:SBC zp:SBC zp:STOP:CHECK:EQUS"SED SBC zp",dresult
+   TIME 4+1 +cpucmos:SED:SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SED SBC zpx,X",dresult
    IF cpucmos
-      SED:TIME 5+(1*Tadjust) +cpucmos:SBC (indirFE):SBC (indirFE):STOP:CHECK:EQUS"SED SBC (indirFE)",dresult
+      TIME 5+1+(1*Tadjust) +cpucmos:SED:SBC (indirFE):SBC (indirFE):STOP:CHECK:EQUS"SED SBC (indirFE)",dresult
    ENDIF
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:SBC addrFF :SBC addrFF :STOP:CHECK:EQUS"SED SBC addrFF",dresult
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:SBC addrFE,X:SBC addrFE,X:STOP:CHECK:EQUS"SED SBC addrFE,X",dresult
-   SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpucmos:SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SED SBC addrFF,X",dresult
-   SED:TIME 4+(1*Tadjust)+(1*Ta2) +cpucmos:SBC addrFE,Y:SBC addrFE,Y:STOP:CHECK:EQUS"SED SBC addrFE,Y",dresult
-   SED:TIME 5+(1*Tadjust)+(2*Ta2) +cpucmos:SBC addrFF,Y:SBC addrFF,Y:STOP:CHECK:EQUS"SED SBC addrFF,Y",dresult
-   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpucmos:SBC (indirFE+1,X):SBC (indirFE+1,X):STOP:CHECK:EQUS"SED SBC (indirFE+1,X)",dresult
-   SED:TIME 5+(1*Tadjust) +cpucmos:SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SED SBC (indirFE),Y",dresult
-   SED:TIME 6+(1*Tadjust)+(1*Ta2) +cpucmos:SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC addrFF :SBC addrFF :STOP:CHECK:EQUS"SED SBC addrFF",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC addrFE,X:SBC addrFE,X:STOP:CHECK:EQUS"SED SBC addrFE,X",dresult
+   TIME 5+1+(1*Tadjust)+(2*Ta2) +cpucmos:SED:SBC addrFF,X:SBC addrFF,X:STOP:CHECK:EQUS"SED SBC addrFF,X",dresult
+   TIME 4+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC addrFE,Y:SBC addrFE,Y:STOP:CHECK:EQUS"SED SBC addrFE,Y",dresult
+   TIME 5+1+(1*Tadjust)+(2*Ta2) +cpucmos:SED:SBC addrFF,Y:SBC addrFF,Y:STOP:CHECK:EQUS"SED SBC addrFF,Y",dresult
+   TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC (indirFE+1,X):SBC (indirFE+1,X):STOP:CHECK:EQUS"SED SBC (indirFE+1,X)",dresult
+   TIME 5+1+(1*Tadjust) +cpucmos:SED:SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SED SBC (indirFE),Y",dresult
+   TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y",dresult
 
    TIME 2 :SEC:SEC:STOP:CHECK:EQUS"SEC",dresult
    TIME 2 :SED:SED:STOP:CLD:CHECK:EQUS"SED",dresult
@@ -636,7 +676,7 @@ ENDMACRO
    TIME 2 :TXA:TXA:STOP:CHECK:EQUS"TXA",dresult
    TSX:TIME 2 :TXS:TXS:STOP:CHECK:EQUS"TXS",dresult
    TIME 2 :TYA:TYA:STOP:CHECK:EQUS"TYA",dresult
-   JSR printstring:EQUS"Testing CLI ( warning may fail)",13,dterm
+   JSR printstring:EQUS"Testing CLI ( warning may fail )",13,dterm
    CLI:TIME 2 :CLI:CLI:STOP:CHECK:EQUS"CLI",dresult
 
    IF cpu = 0
@@ -667,8 +707,8 @@ ENDMACRO
       TIME 8+(4*Ta2) :EQUB&E3,indirFE+1:EQUB&E3,indirFE+1:STOP:CHECK:EQUS"&E3 ISC (ISB,INS) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFE:EQUB&F3,indirFE:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&F3,indirFF:EQUB&F3,indirFF:STOP:CHECK:EQUS"&F3 ISC (ISB,INS) (indirFF),Y",dresult
-      TSX:STX zpx:LDX#1:TIME 4+(2*Ta2) :UNDOC3BYTE &BB,addrFE:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
-      TSX:STX zpx:LDX#1:TIME 5+(3*Ta2) :UNDOC3BYTE &BB,addrFF:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
+      TSX:STX zpx:TIME 4+4+(2*Ta2) :UNDOC3BYTE &BB,addrFE:LDX zpx:LDX zpx:TXS:STOP:CHECK:EQUS"&BB LAS (LAR) addrFE,Y",dresult
+      TSX:STX zpx:TIME 5+4+(3*Ta2) :UNDOC3BYTE &BB,addrFF:LDX zpx:LDX zpx:TXS:STOP:CHECK:EQUS"&BB LAS (LAR) addrFF,Y",dresult
       TIME 3 :EQUB&A7,zp:EQUB&A7,zp:STOP:CHECK:EQUS"&A7 LAX zp",dresult
       TIME 4 :EQUB&B7,zpx:EQUB&B7,zpx:STOP:CHECK:EQUS"&B7 LAX zpx",dresult
       TIME 4+(2*Ta2) :UNDOC3BYTE &AF,addrFF:STOP:CHECK:EQUS"&AF LAX addrFF",dresult
@@ -708,10 +748,11 @@ ENDMACRO
       TIME 6+(2*Ta2) :EQUB&93,indirFE:EQUB&93,indirFE:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFE),Y",dresult
       TIME 6+(1*Ta2) :EQUB&93,indirFF:EQUB&93,indirFF:STOP:CHECK:EQUS"&93 SHA (AHX, AXA) (indirFF),Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9E,addrFE:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFE,Y",dresult
-      LDX #8:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
+      LDX #8:TIME 5+1+(1*Ta2) :LDA #0:UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
-      LDY #8:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
+      LDY #8:TIME 5+1+(1*Ta2) :LDA #0:UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
       TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
+
       TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
       TIME 6+(4*Ta2) :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
       TIME 7+(5*Ta2) :UNDOC3BYTE &1F,addrFE:STOP:CHECK:EQUS"&1F SLO (ASO) addrFE,X",dresult
@@ -731,9 +772,9 @@ ENDMACRO
       TIME 8+(4*Ta2) :EQUB&43,indirFE+1:EQUB&43,indirFE+1:STOP:CHECK:EQUS"&43 SRE (LSE) (indirFE+1,X)",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFE:EQUB&53,indirFE:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFE),Y",dresult
       TIME 8+(4*Ta2) :EQUB&53,indirFF:EQUB&53,indirFF:STOP:CHECK:EQUS"&53 SRE (LSE) (indirFF),Y",dresult
-      TSX:STX zpx:TIME 5+(3*Ta2) :UNDOC3BYTE &9B,addrFE:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
+      TSX:STX zpx:TIME 5+4+(3*Ta2) :UNDOC3BYTE &9B,addrFE:LDX zpx:LDX zpx:TXS:STOP:CHECK:EQUS"&9B TAS (XAS,SHS) addrFE,Y",dresult
       ; the following doesn't correctly test page boundary crossing . We probably should define where in memory this actually accesses
-      TSX:STX zpx:LDX #0:TXS:TIMELDAZERO 5+(1*Ta2) :UNDOC3BYTE &9B,addrFF:STOP:TXA:LDX zpx:TXS:TAX:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
+      TSX:STX zpx:TIME 5+3+4+(1*Ta2) :LDA #0:TAX:TXS:UNDOC3BYTE &9B,addrFF:LDX zpx:LDX zpx:TXS:STOP:CHECK:EQUS"&9B TAS (XAS,SHS) addrFF,Y",dresult
       TIME 2 :EQUB&EB,imm:EQUB&EB,imm:STOP:CHECK:EQUS"&EB USBC (SBC) #imm",dresult
       TIME 2 :EQUB&1A:EQUB&1A:STOP:CHECK:EQUS"&1A NOP",dresult
       TIME 2 :EQUB&3A:EQUB&3A:STOP:CHECK:EQUS"&3A NOP",dresult
@@ -855,6 +896,7 @@ ENDMACRO
       TIME 8 :UNDOC3BYTE &5C,addrFF:STOP:CHECK:EQUS"&5C NOP addrFF",dresult
       TIME 4+(2*Tadjust) :UNDOC3BYTE &DC,addrFF:STOP:CHECK:EQUS"&DC NOP addrFF",dresult
       TIME 4+(2*Tadjust) :UNDOC3BYTE &FC,addrFF:STOP:CHECK:EQUS"&FC NOP addrFF",dresult
+
    ENDIF
 
    JSR printstring:EQUS"Done!",13,13,"Number of failures : 0x",dterm
@@ -862,9 +904,8 @@ ENDMACRO
    LDA #13: JSR osasci
 
    LDA passfailzp
-   STA passfailreg
+   JMP endoftests
 
-   RTS
 
 .blockcopy
    STA ptr2
@@ -960,19 +1001,18 @@ ENDMACRO
    BMI prcolumn
 
    TXA
-IF (Tscale !=0)
    CLC
    BPL shiftscale
    SEC
 .shiftscale
    ROR A
-ENDIF
 
    JSR PrHex
-   PLA
-   TAY
    LDA #13
    JSR osasci
+
+   PLA
+   TAY
 
 .PrTextEnd
    CLC
