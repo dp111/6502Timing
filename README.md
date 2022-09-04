@@ -21,6 +21,8 @@ This creates SSDs that can be shift breaked to start the test.
 |65C02timing.ssd   |BBC upgraded to 65C02 instruction timing test suite|
 |65C02timing1M.ssd |BBC upgraded to 65C02 instruction timing test suite with absolute address at &FCFE to provoke cycle stretching|
 
+At the end of the test $FCD0 is written to with the number of failures. Emulators can trap writes to this address and work out if the tests have passed or not. 
+
 # Vectors Build ( .6502)
 
 These versions are the same as the acorn version except they aren't built within an SSD file. The vector versions have a fixed set of vectors that external functions are vectored through. This enables easy patching of the vectors to add custom timer functions for instance. If your code functions are small ( <17bytes) then you can place your code directly at the vector otherwise you will need to JMP to you function.
