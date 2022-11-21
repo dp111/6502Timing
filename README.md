@@ -25,7 +25,7 @@ At the end of the test $FCD0 is written to with the number of failures. Emulator
 
 # Vectors Build ( .6502)
 
-These versions are the same as the acorn version except they aren't built within an SSD file. The vector versions have a fixed set of vectors that external functions are vectored through. This enables easy patching of the vectors to add custom timer functions for instance. If your code functions are small ( <17bytes) then you can place your code directly at the vector otherwise you will need to JMP to you function.
+These versions are the same as the acorn version except they aren't built within an SSD file. The vector versions have a fixed set of vectors that external functions are vectored through. This enables easy patching of the vectors to add custom timer functions for instance. If your code functions are small ( <17bytes) then you can place your code directly at the vector otherwise you will need to JMP to your function.
 
 | Vector | Function |
 | ------- | ----- |
