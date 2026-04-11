@@ -65,7 +65,7 @@ IF target = 2 ; C64
    BCadjust = 0; number of extra bytes in the time macro
    c64osasci = &FFD2 ; os print byte ( needs to preserve X and Y)
    timerbase  = &DD00 ; base address of timer
-   passfailreg = $DFFF ; address that is written to to signify pass or number of failures
+   passfailreg = &DFFF ; address that is written to to signify pass or number of failures
 
    prgorg = &2000-15
    ORG &7FF; code origin
@@ -87,14 +87,14 @@ IF target = 2 ; C64
 
 .osasci
    cmp #64
-   bcc  printcharok
+   bcc printcharok
    eor #32
 .printcharok
    jmp c64osasci
 
 .setup
    LDA #&7F : STA timerbase+&D ; turn off interrupts
-   LDA #$E  ; Select other font
+   LDA #&E  ; Select other font
    JSR c64osasci
 
    RTS
@@ -105,7 +105,7 @@ IF target = 2 ; C64
    STA timerbase+4
    STA timerbase+5
 .waitforrasterloop
-   LDA $D012               ; hardcoded raster counter . we need to sync to the beginning of the frame
+   LDA &D012               ; hardcoded raster counter . we need to sync to the beginning of the frame
    AND #&e4
    BNE waitforrasterloop
    LDA #&11
@@ -131,7 +131,7 @@ IF ((target = 0) OR (target =1))
 
    ORG origin+&10
 .osasci                 ; put char vector
-   JMP $FFE3            ; os print byte ( needs to preserve X and Y)
+   JMP &FFE3            ; os print byte ( needs to preserve X and Y)
 
    ORG origin+&20
 .setup                   ; setup timer vector
@@ -241,12 +241,12 @@ ENDMACRO
    ENDIF
 
    IF target = 1
-      EQUB " (1MHz)"
+      EQUS " (1MHz)"
    ENDIF
 
    EQUB 13,13
 
-   EQUS "Version : 0.23",13
+   EQUS "Version : 0.24",13
    EQUS "Build Date : ",TIME$,13,13
    EQUS "Only errors are printed",13
    EQUS "Note : X = 1 and Y = 1",13
@@ -256,7 +256,7 @@ ENDMACRO
 
    TIME 0 :STOP:CHECK:EQUS"Warning Timer Zero Error",dresult
 
-   JSR printstring:
+   JSR printstring
    EQUS "Checking documented instructions...",13,14,dterm
 
    ; setup indirect pointers
@@ -285,6 +285,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"ADC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:ADC (indirFF),Y:BIT 0:ADC (indirFF),Y:STOP:CHECK:EQUS"ADC (indirFF),Y NMOS/CMOS diff",dresult
+  
    TIME 2+1 +cpucmos:SED:ADC #imm :ADC #imm:STOP:CHECK:EQUS"SED ADC #imm",dresult
    TIME 3+1 +cpucmos:SED:ADC zp:ADC zp:STOP:CHECK:EQUS"SED ADC zp",dresult
    TIME 4+1 +cpucmos:SED:ADC zpx,X:ADC zpx,X:STOP:CHECK:EQUS"SED ADC zpx,X",dresult
@@ -300,7 +302,8 @@ ENDMACRO
    TIME 5+1+(1*Tadjust) +cpucmos:SED:ADC (indirFE),Y:ADC (indirFE),Y:STOP:CHECK:EQUS"SED ADC (indirFE),Y",dresult
    TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:ADC (indirFF),Y:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y",dresult
 
-
+   TIME 10+1+(1*Tadjust)+(2*Ta2)+cpucmos:SED:BIT 0:ADC (indirFF),Y:SED:BIT 0:ADC (indirFF),Y:STOP:CHECK:EQUS"SED ADC (indirFF),Y NMOS/CMOS diff",dresult
+  
    TIME 2 :AND #imm:AND #imm:STOP:CHECK:EQUS"AND #imm",dresult
    TIME 3 :AND zp:AND zp:STOP:CHECK:EQUS"AND zp",dresult
    TIME 4 :AND zpx,X:AND zpx,X:STOP:CHECK:EQUS"AND zpx,X",dresult
@@ -316,6 +319,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :AND (indirFE),Y:AND (indirFE),Y:STOP:CHECK:EQUS"AND (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :AND (indirFF),Y:AND (indirFF),Y:STOP:CHECK:EQUS"AND (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:AND (indirFF),Y:BIT 0:AND (indirFF),Y:STOP:CHECK:EQUS"AND (indirFF),Y NMOS/CMOS diff",dresult
+  
    TIME 2 :ASL A:ASL A:STOP:CHECK:EQUS"ASL A",dresult
    TIME 5 :ASL zp:ASL zp:STOP:CHECK:EQUS"ASL zp",dresult
    TIME 6 :ASL zpx,X:ASL zpx,X:STOP:CHECK:EQUS"ASL zpx,X",dresult
@@ -386,7 +391,7 @@ ENDMACRO
    ENDIF
 
    TIME 2+1 :LDA#1:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI not taken",dresult
-   TIME 3+1 :LDA#128::BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
+   TIME 3+1 :LDA#128:BMI*+2:BMI*+2:STOP:CHECK:EQUS"BMI taken",dresult
    {BLOCKCOPY branchaddress-12, bs,be : .bs TIME 8 :LDA#128:BMI*+4:.b BMI*+6:BMI *+2:BMI b:STOP:RTS:.be : CHECK: EQUS"BMI page cross",dresult}
 
    TIME 2+1 :LDA#0:BNE*+2:BNE*+2:STOP:CHECK:EQUS"BNE not taken",dresult
@@ -431,6 +436,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :CMP (indirFE),Y:CMP (indirFE),Y:STOP:CHECK:EQUS"CMP (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :CMP (indirFF),Y:CMP (indirFF),Y:STOP:CHECK:EQUS"CMP (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:CMP (indirFF),Y:BIT 0:CMP (indirFF),Y:STOP:CHECK:EQUS"CMP (indirFF),Y NMOS/CMOS diff",dresult
+  
    TIME 2 :CPX #imm:CPX #imm:STOP:CHECK:EQUS"CPX #imm",dresult
    TIME 3 :CPX zp:CPX zp:STOP:CHECK:EQUS"CPX zp",dresult
    TIME 4+(2*Tadjust) :CPX addrFF :CPX addrFF :STOP:CHECK:EQUS"CPX addrFF",dresult
@@ -466,6 +473,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :EOR (indirFE),Y:EOR (indirFE),Y:STOP:CHECK:EQUS"EOR (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :EOR (indirFF),Y:EOR (indirFF),Y:STOP:CHECK:EQUS"EOR (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:EOR (indirFF),Y:BIT 0:EOR (indirFF),Y:STOP:CHECK:EQUS"EOR (indirFF),Y NMOS/CMOS diff",dresult
+  
    IF cpucmos
       TIME 2 :INC A:INC A:STOP:CHECK:EQUS"INC A",dresult
    ENDIF
@@ -505,6 +514,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :LDA (indirFE),Y:LDA (indirFE),Y:STOP:CHECK:EQUS"LDA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :LDA (indirFF),Y:LDA (indirFF),Y:STOP:CHECK:EQUS"LDA (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:LDA (indirFF),Y:BIT 0:LDA (indirFF),Y:STOP:CHECK:EQUS"LDA (indirFF),Y NMOS/CMOS diff",dresult
+  
    TIME 2 :LDX #imm:LDX #imm:STOP:CHECK:EQUS"LDX #imm",dresult
    TIME 3 :LDX zp:LDX zp:STOP:CHECK:EQUS"LDX zp",dresult
    TIME 4 :LDX zp,Y:LDX zp,Y:STOP:CHECK:EQUS"LDX zp,Y",dresult
@@ -542,6 +553,8 @@ ENDMACRO
    TIME 6+(2*Tadjust) :ORA (indirFE+1,X):ORA (indirFE+1,X):STOP:CHECK:EQUS"ORA (indirFE+1,X)",dresult
    TIME 5+(1*Tadjust) :ORA (indirFE),Y:ORA (indirFE),Y:STOP:CHECK:EQUS"ORA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :ORA (indirFF),Y:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y",dresult
+
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:ORA (indirFF),Y:BIT 0:ORA (indirFF),Y:STOP:CHECK:EQUS"ORA (indirFF),Y NMOS/CMOS diff",dresult
 
    TIME 3 :PHA:PHA:STOP:PLA:PLA:TXA:CHECK:EQUS"PHA",dresult
    TIME 3 :PHP:PHP:STOP:PLP:PLP:TXA:CHECK:EQUS"PHP",dresult
@@ -610,6 +623,8 @@ ENDMACRO
    TIME 5+(1*Tadjust) :SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SBC (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y",dresult
 
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:SBC (indirFF),Y:BIT 0:SBC (indirFF),Y:STOP:CHECK:EQUS"SBC (indirFF),Y NMOS/CMOS diff",dresult
+
    TIME 2+1 +cpucmos:SED:SBC #imm:SBC #imm:STOP:CHECK:EQUS"SED SBC #imm",dresult
    TIME 3+1 +cpucmos:SED:SBC zp:SBC zp:STOP:CHECK:EQUS"SED SBC zp",dresult
    TIME 4+1 +cpucmos:SED:SBC zpx,X:SBC zpx,X:STOP:CHECK:EQUS"SED SBC zpx,X",dresult
@@ -624,6 +639,8 @@ ENDMACRO
    TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC (indirFE+1,X):SBC (indirFE+1,X):STOP:CHECK:EQUS"SED SBC (indirFE+1,X)",dresult
    TIME 5+1+(1*Tadjust) +cpucmos:SED:SBC (indirFE),Y:SBC (indirFE),Y:STOP:CHECK:EQUS"SED SBC (indirFE),Y",dresult
    TIME 6+1+(1*Tadjust)+(1*Ta2) +cpucmos:SED:SBC (indirFF),Y:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y",dresult
+
+   TIME 10+1+(1*Tadjust)+(2*Ta2)+cpucmos:SED:BIT 0:SBC (indirFF),Y:SED:BIT 0:SBC (indirFF),Y:STOP:CHECK:EQUS"SED SBC (indirFF),Y NMOS/CMOS diff",dresult
 
    TIME 2 :SEC:SEC:STOP:CHECK:EQUS"SEC",dresult
    TIME 2 :SED:SED:STOP:CLD:CHECK:EQUS"SED",dresult
@@ -641,6 +658,9 @@ ENDMACRO
    TIME 6+(2*Tadjust) :STA (indirFE+1,X):STA (indirFE+1,X):STOP:CHECK:EQUS"STA (indirFE+1,X)",dresult
    TIME 6+(2*Tadjust) :STA (indirFE),Y:STA (indirFE),Y:STOP:CHECK:EQUS"STA (indirFE),Y",dresult
    TIME 6+(2*Tadjust) :STA (indirFF),Y:STA (indirFF),Y:STOP:CHECK:EQUS"STA (indirFF),Y",dresult
+
+   TIME 9+(1*Tadjust)+(2*Ta2) :BIT 0:STA (indirFF),Y:BIT 0:STA (indirFF),Y:STOP:CHECK:EQUS"STA (indirFF),Y NMOS/CMOS diff",dresult
+
    TIME 3 :STX zp:STX zp:STOP:CHECK:EQUS"STX zp",dresult
    TIME 4 :STX zpx,Y:STX zpx,Y:STOP:CHECK:EQUS"STX zpx,Y",dresult
    TIME 4+(2*Tadjust) :STX addrFE:STX addrFE :STOP:CHECK:EQUS"STX addrFE",dresult
@@ -654,7 +674,6 @@ ENDMACRO
    ENDIF
 
    IF cpucmos
-
       TIME 3 :STZ zp:STZ zp:STOP:CHECK:EQUS"STZ zp",dresult
       TIME 4 :STZ zpx,X:STZ zpx,X:STOP:CHECK:EQUS"STZ zpx,X",dresult
       TIME 4+(2*Tadjust) :STZ addrFE:STZ addrFE :STOP:CHECK:EQUS"STZ addrFE",dresult
@@ -751,7 +770,7 @@ ENDMACRO
       LDX #8:TIME 5+1+(1*Ta2) :LDA #0:UNDOC3BYTE &9E,addrFF:STOP:CHECK:EQUS"&9E SHX (A11, SXA, XAS) addrFF,Y",dresult
       TIME 5+(3*Ta2) :UNDOC3BYTE &9C,addrFE:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFE,X",dresult
       LDY #8:TIME 5+1+(1*Ta2) :LDA #0:UNDOC3BYTE &9C,addrFF:STOP:CHECK:EQUS"&9C SHY (A11, SYA, SAY) addrFF,X",dresult
-      TIME 5 :EQUB&07,zp:EQUB07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
+      TIME 5 :EQUB&07,zp:EQUB&07,zp:STOP:CHECK:EQUS"&07 SLO (ASO) zp",dresult
 
       TIME 6 :EQUB&17,zpx:EQUB&17,zpx:STOP:CHECK:EQUS"&17 SLO (ASO) zpx",dresult
       TIME 6+(4*Ta2) :UNDOC3BYTE &0F,addrFF:STOP:CHECK:EQUS"&0F SLO (ASO) addrFF",dresult
